@@ -26,10 +26,8 @@ func main() {
 	part1 := 0
 	part2 := 0
 	for xIdx, line := range grid {
-		for yIdx, rune := range line {
-			if rune == part1Word[0] {
-				part1 += SearchAround(grid, xIdx, yIdx)
-			}
+		for yIdx := range line {
+			part1 += SearchAround(grid, xIdx, yIdx)
 			if IsXMas(grid, xIdx, yIdx) {
 				part2 += 1
 			}
