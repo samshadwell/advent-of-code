@@ -10,9 +10,6 @@ import (
 var part1Word = []rune{
 	'X', 'M', 'A', 'S'}
 
-var part2Word = []rune{
-	'M', 'A', 'S'}
-
 func main() {
 	file, err := os.Open("input.txt")
 	if err != nil {
