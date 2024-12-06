@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -161,7 +160,8 @@ func FixSeq(seq []int, rules RuleSet) []int {
 		}
 	}
 
-	// Edges stored in the reverse order of a "normal" adjacency list
+	// Edges stored as to -> from, the reverse order of a "normal" adjacency list
+	// Invariant: All values have at least one element
 	revEdges := make(map[int][]int)
 	for _, rule := range relevantRules {
 		_, ok := revEdges[rule.after]
@@ -174,20 +174,17 @@ func FixSeq(seq []int, rules RuleSet) []int {
 
 	// Kahn's algorithm, from https://en.wikipedia.org/wiki/Topological_sorting
 	l := make([]int, 0, len(seq))
-	s := make(map[int]bool)
+	s := make([]int, 0, len(seq))
 	for _, item := range seq {
 		befores := revEdges[item]
 		if befores == nil {
-			s[item] = true
+			s = append(s, item)
 		}
 	}
 
 	for len(s) > 0 {
-		n, err := getRandomKey(s)
-		delete(s, n)
-		if err != nil {
-			log.Fatal("programmer error, attempted to get ramdom element from empty set")
-		}
+		n := s[len(s)-1]
+		s = s[:len(s)-1]
 
 		l = append(l, n)
 		for m, edges := range revEdges {
@@ -195,7 +192,7 @@ func FixSeq(seq []int, rules RuleSet) []int {
 			if idx >= 0 {
 				newEdges := slices.Delete(edges, idx, idx+1)
 				if len(newEdges) == 0 {
-					s[m] = true
+					s = append(s, m)
 					delete(revEdges, m)
 				} else {
 					revEdges[m] = newEdges
@@ -204,12 +201,4 @@ func FixSeq(seq []int, rules RuleSet) []int {
 		}
 	}
 	return l
-}
-
-func getRandomKey(set map[int]bool) (int, error) {
-	for k := range set {
-		return k, nil
-	}
-
-	return 0, errors.New("cannot get random element from empty set")
 }
