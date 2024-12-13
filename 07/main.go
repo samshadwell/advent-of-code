@@ -58,15 +58,12 @@ func main() {
 }
 
 func CanMake(target int, operands []int, withConcat bool) bool {
-	if target < 0 {
-		return false
-	}
 	if len(operands) == 0 {
 		return target == 0
 	}
 
 	heads, end := operands[:len(operands)-1], operands[len(operands)-1]
-	if CanMake(target-end, heads, withConcat) ||
+	if (target-end >= 0 && CanMake(target-end, heads, withConcat)) ||
 		(target%end == 0 && CanMake(target/end, heads, withConcat)) {
 		return true
 	}
