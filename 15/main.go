@@ -18,7 +18,7 @@ type Location struct {
 	col int
 }
 
-func (l *Location) Plus(other Location) Location {
+func (l Location) Plus(other Location) Location {
 	return Location{
 		row: l.row + other.row,
 		col: l.col + other.col,
@@ -46,7 +46,7 @@ func main() {
 	}
 
 	parsingBoard := true
-	board := make([][]rune, 0)
+	p1Board := make([][]rune, 0)
 	moves := make([]rune, 0)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -56,14 +56,14 @@ func main() {
 		}
 
 		if parsingBoard {
-			board = append(board, []rune(line))
+			p1Board = append(p1Board, []rune(line))
 		} else {
 			moves = append(moves, []rune(line)...)
 		}
 	}
 
-	board2 := make([][]rune, 0, len(board))
-	for _, row := range board {
+	p2Board := make([][]rune, 0, len(p1Board))
+	for _, row := range p1Board {
 		row2 := make([]rune, 0, 2*len(row))
 		for _, rune := range row {
 			if rune == '#' {
@@ -76,42 +76,33 @@ func main() {
 				row2 = append(row2, '@', '.')
 			}
 		}
-		board2 = append(board2, row2)
+		p2Board = append(p2Board, row2)
 	}
 
-	robot, err := FindAndReplaceRobot(board)
+	_, err = DoAllMoves(area, p1Board, moves)
 	if err != nil {
-		log.Fatalf("error while finding robot: %v", err)
+		log.Fatalf("error while performing part 1 moves: %v", err)
 	}
-	_, err = DoMoves(area, board, moves, robot)
-	if err != nil {
-		log.Fatalf("error while performing moves: %v", err)
-	}
+	part1 := Score(p1Board)
 
-	part1 := Part1(board)
+	_, err = DoAllMoves(area, p2Board, moves)
+	if err != nil {
+		log.Fatalf("error while performing part 2 moves: %v", err)
+	}
+	part2 := Score(p2Board)
 
 	fmt.Printf("Part 1: %d\n", part1)
-
-	robot2, _ := FindAndReplaceRobot(board2)
-	fmt.Println(Render(board2, robot2))
+	fmt.Printf("Part 2: %d\n", part2)
 }
 
-func FindAndReplaceRobot(board [][]rune) (Location, error) {
-	for rIdx, row := range board {
-		for cIdx, rune := range row {
-			if rune == '@' {
-				board[rIdx][cIdx] = '.'
-				return Location{rIdx, cIdx}, nil
-			}
-		}
+func DoAllMoves(printer *pterm.AreaPrinter, board [][]rune, moves []rune) (Location, error) {
+	robot, err := findAndReplaceRobot(board)
+	if err != nil {
+		return Location{}, err
 	}
-	return Location{}, errors.New("failed to find robot on board")
-}
 
-func DoMoves(printer *pterm.AreaPrinter, board [][]rune, moves []rune, robot Location) (Location, error) {
-	var err error
 	for _, move := range moves {
-		robot, err = MoveRobot(board, move, robot)
+		robot, err = moveRobot(board, move, robot)
 		if err != nil {
 			return Location{}, err
 		}
@@ -124,50 +115,140 @@ func DoMoves(printer *pterm.AreaPrinter, board [][]rune, moves []rune, robot Loc
 	return robot, nil
 }
 
-var moves = map[rune]Location{
-	'v': {row: 1, col: 0},
-	'>': {row: 0, col: 1},
-	'^': {row: -1, col: 0},
-	'<': {row: 0, col: -1},
+func findAndReplaceRobot(board [][]rune) (Location, error) {
+	for rIdx, row := range board {
+		for cIdx, rune := range row {
+			if rune == '@' {
+				board[rIdx][cIdx] = '.'
+				return Location{rIdx, cIdx}, nil
+			}
+		}
+	}
+	return Location{}, errors.New("failed to find robot on board")
 }
 
-func MoveRobot(board [][]rune, move rune, start Location) (Location, error) {
+var left = Location{row: 0, col: -1}
+var right = Location{row: 0, col: 1}
+var down = Location{row: 1, col: 0}
+var up = Location{row: -1, col: 0}
+
+var moves = map[rune]Location{
+	'v': down,
+	'>': right,
+	'^': up,
+	'<': left,
+}
+
+func moveRobot(board [][]rune, move rune, start Location) (Location, error) {
 	direction, ok := moves[move]
 	if !ok {
 		return Location{}, fmt.Errorf("unrecognized move direction '%c'", move)
 	}
-
-	nextLocation := start.Plus(direction)
-	nextContents := board[nextLocation.row][nextLocation.col]
-	if nextContents == '.' {
-		// Case 1: space is empty, robot simply moves into it
-		return nextLocation, nil
-	} else if nextContents == '#' {
-		// Case 2: space is a wall, robot fails to move
-		return start, nil
+	nextLoc := start.Plus(direction)
+	if canVacate(board, nextLoc, direction) {
+		err := doVacate(board, nextLoc, direction)
+		if err != nil {
+			return Location{}, err
+		}
+		return nextLoc, nil
 	}
+	return start, nil
+}
 
-	// Error case, assuming that a "valid" board should only have one of three runes
-	if nextContents != 'O' {
-		return Location{}, fmt.Errorf("unrecognized board contents: '%c'", nextContents)
+// Returns true if given location is empty, or if it can become empty by moving contents in given direction
+func canVacate(board [][]rune, loc Location, direction Location) bool {
+	contents := board[loc.row][loc.col]
+
+	switch contents {
+	case '.':
+		return true
+	case '#':
+		return false
+	case 'O':
+		return canVacate(board, loc.Plus(direction), direction)
+	case '[':
+		switch direction {
+		case left:
+			return canVacate(board, loc.Plus(direction), direction)
+		case right:
+			return canVacate(board, loc.Plus(right).Plus(right), direction)
+		case up, down:
+			l := loc.Plus(direction)
+			r := loc.Plus(direction).Plus(right)
+			return canVacate(board, l, direction) && canVacate(board, r, direction)
+		default:
+			panic("programmer error, unknown direction in canVacate call")
+		}
+	case ']':
+		// Right half of box simply follows left half
+		return canVacate(board, loc.Plus(left), direction)
+	default:
+		panic(fmt.Sprintf("programmer error, default case of canVacate should be unreachable, contents %c", contents))
 	}
+}
 
-	// Case 3: space is a box. We may either push it or be blocked
-	eventual := nextLocation.Plus(direction)
-	for ; board[eventual.row][eventual.col] == 'O'; eventual = eventual.Plus(direction) {
-	}
-	eventualContents := board[eventual.row][eventual.col]
+// At end of function call, loc is empty and any items on it have been moved in the given direction
+func doVacate(board [][]rune, loc Location, direction Location) error {
+	contents := board[loc.row][loc.col]
 
-	if eventualContents == '.' {
-		// Case 3a: we push box(es) into an empty space
-		board[eventual.row][eventual.col] = 'O'
-		board[nextLocation.row][nextLocation.col] = '.'
-		return nextLocation, nil
-	} else if eventualContents == '#' {
-		// Case 3b: we're pushing on a box(es) against a wall, we fail to move
-		return start, nil
-	} else {
-		return Location{}, fmt.Errorf("programmer error, unexpected rune when looking down boxes: '%c'", eventualContents)
+	switch contents {
+	case '.':
+		return nil
+	case '#':
+		return errors.New("doVacate called on wall-occupied space")
+	case 'O':
+		next := loc.Plus(direction)
+		err := doVacate(board, next, direction)
+		if err != nil {
+			return err
+		}
+		board[next.row][next.col] = board[loc.row][loc.col]
+		board[loc.row][loc.col] = '.'
+		return nil
+	case ']':
+		return doVacate(board, loc.Plus(left), direction)
+	case '[':
+		switch direction {
+		case left:
+			next := loc.Plus(direction)
+			err := doVacate(board, next, direction)
+			if err != nil {
+				return err
+			}
+			board[next.row][next.col] = board[loc.row][loc.col]
+			board[loc.row][loc.col] = ']'
+			r := loc.Plus(right)
+			board[r.row][r.col] = '.'
+		case right:
+			next := loc.Plus(direction).Plus(direction)
+			err := doVacate(board, next, direction)
+			if err != nil {
+				return err
+			}
+			board[next.row][next.col] = ']'
+			l := next.Plus(left)
+			board[l.row][l.col] = '['
+			board[loc.row][loc.col] = '.'
+		case up, down:
+			r := loc.Plus(right)
+			nextL := loc.Plus(direction)
+			nextR := loc.Plus(direction).Plus(right)
+			err := doVacate(board, nextL, direction)
+			if err != nil {
+				return err
+			}
+			err = doVacate(board, nextR, direction)
+			if err != nil {
+				return err
+			}
+			board[nextL.row][nextL.col] = '['
+			board[nextR.row][nextR.col] = ']'
+			board[loc.row][loc.col] = '.'
+			board[r.row][r.col] = '.'
+		}
+		return nil
+	default:
+		panic(fmt.Sprintf("programmer error, default case of doMove should be unreachable, contents %c", contents))
 	}
 }
 
@@ -186,11 +267,11 @@ func Render(board [][]rune, robot Location) string {
 	return sb.String()
 }
 
-func Part1(board [][]rune) int {
+func Score(board [][]rune) int {
 	total := 0
 	for rIdx, row := range board {
 		for cIdx, rune := range row {
-			if rune == 'O' {
+			if rune == 'O' || rune == '[' {
 				total += 100*rIdx + cIdx
 			}
 		}
