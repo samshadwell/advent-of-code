@@ -2,7 +2,10 @@ module advent-of-code
 
 go 1.23.3
 
-require github.com/pterm/pterm v0.12.80
+require (
+	github.com/google/go-cmp v0.6.0
+	github.com/pterm/pterm v0.12.80
+)
 
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
