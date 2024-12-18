@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"os"
 
 	"advent-of-code/util/grids"
@@ -17,11 +18,17 @@ var directions = []grids.Location{
 	{Row: -1, Col: 0}, // North
 }
 
-type workItem struct {
+// A _loc_ation, _dir_ection tuple. Useful since we care not only about where a given
+// reindeer is on the map, but also what direction it is facing
+type locDir struct {
 	location  grids.Location
-	parent    grids.Location
 	direction int
-	cost      int
+}
+
+type workItem struct {
+	current locDir
+	parent  *locDir
+	cost    int
 }
 
 // See https://pkg.go.dev/container/heap, particularly the IntHeap example
@@ -59,6 +66,11 @@ func main() {
 	fmt.Printf("Part 2: %d\n", part2)
 }
 
+const (
+	straightCost = 1
+	turnCost     = 1000
+)
+
 func findBestPath(maze [][]rune) (int, int, error) {
 	start, ok := grids.FindRune(maze, 'S')
 	if !ok {
@@ -70,76 +82,95 @@ func findBestPath(maze [][]rune) (int, int, error) {
 		return 0, 0, errors.New("did not find end location in maze")
 	}
 
-	h := &workHeap{workItem{start, start, 0, 0}}
+	h := &workHeap{workItem{locDir{start, 0}, nil, 0}}
 	heap.Init(h)
 
-	lowestCosts := make(map[grids.Location]int)
-	parents := make(map[grids.Location][]grids.Location)
+	// Map from a given (location, direction) tuple to the lowest cost required to get there
+	lowestCosts := make(map[locDir]int)
+	// The parent (location, direction) tuples along all lowest-cost paths to a given (location, direction)
+	parents := make(map[locDir][]*locDir)
 
 	for h.Len() > 0 {
 		wi := heap.Pop(h).(workItem)
-
-		if wi.location == (grids.Location{Row: 7, Col: 5}) {
-			fmt.Printf("%v\n", wi)
-		}
-
-		if prevBest, ok := lowestCosts[wi.location]; ok {
-			if prevBest == wi.cost {
-				parents[wi.location] = append(parents[wi.location], wi.parent)
-			}
+		if prevBest, ok := lowestCosts[wi.current]; ok && prevBest < wi.cost {
+			// If we've already found a better route to this locDir do nothing
+			continue
+		} else if ok && prevBest == wi.cost {
+			// We've found an equally-good route to this locDir, update the parents
+			parents[wi.current] = append(parents[wi.current], wi.parent)
 			continue
 		}
-		lowestCosts[wi.location] = wi.cost
-		parents[wi.location] = []grids.Location{wi.parent}
+		// Implicit else: this is the best route we've found to this locDir. We will find
+		// no better routes, as the costs will monotonically increase from here
+		lowestCosts[wi.current] = wi.cost
+		parents[wi.current] = []*locDir{wi.parent}
 
-		straight := wi.location.Plus(directions[wi.direction])
+		// From here we can do three things: go straight, turn left, or turn right
+		straight := wi.current.location.Plus(directions[wi.current.direction])
 		if maze[straight.Row][straight.Col] != '#' {
 			heap.Push(h, workItem{
-				straight,
-				wi.location,
-				wi.direction,
-				wi.cost + 1,
+				locDir{straight, wi.current.direction},
+				&wi.current,
+				wi.cost + straightCost,
 			})
 		}
 
-		rightDir := (wi.direction + 1) % 4
-		right := wi.location.Plus(directions[rightDir])
-		if maze[right.Row][right.Col] != '#' {
-			heap.Push(h, workItem{
-				right,
-				wi.location,
-				rightDir,
-				wi.cost + 1001,
-			})
-		}
+		rightDir := (wi.current.direction + 1) % 4
+		heap.Push(h, workItem{
+			locDir{wi.current.location, rightDir},
+			&wi.current,
+			wi.cost + turnCost,
+		})
 
-		leftDir := (wi.direction + 3) % 4
-		left := wi.location.Plus(directions[leftDir])
-		if maze[left.Row][left.Col] != '#' {
-			heap.Push(h, workItem{
-				left,
-				wi.location,
-				leftDir,
-				wi.cost + 1001,
-			})
+		leftDir := (wi.current.direction + 3) % 4
+		heap.Push(h, workItem{
+			locDir{wi.current.location, leftDir},
+			&wi.current,
+			wi.cost + turnCost,
+		})
+	}
+
+	// Because we don't care about the orientation at which we reach the end, find the
+	// lowest-cost among all the directions
+	minCost := math.MaxInt
+	minCosts := make([]locDir, 0)
+	for d := 0; d < len(directions); d++ {
+		ld := locDir{end, d}
+		if c, ok := lowestCosts[ld]; ok && c < minCost {
+			minCost = c
+			minCosts = []locDir{ld}
+		} else if ok && c == minCost {
+			minCosts = append(minCosts, ld)
 		}
 	}
 
-	cost, ok := lowestCosts[end]
-	if !ok {
+	if len(minCosts) == 0 {
 		return 0, 0, errors.New("did not find path to end")
 	}
 
-	onPaths := make(map[grids.Location]bool)
-	queue := []grids.Location{end}
+	part1 := minCost
+	part2 := part2(minCosts, parents)
+
+	return part1, part2, nil
+}
+
+func part2(minCosts []locDir, parents map[locDir][]*locDir) int {
+	locations := make(map[grids.Location]bool)
+	queue := make([]*locDir, 0)
+	for _, ld := range minCosts {
+		queue = append(queue, &ld)
+	}
 	for len(queue) > 0 {
 		l := queue[len(queue)-1]
 		queue = queue[:len(queue)-1]
-		onPaths[l] = true
-		if l != start {
-			queue = append(queue, parents[l]...)
-		}
-	}
 
-	return cost, len(onPaths), nil
+		if l == nil {
+			continue
+		}
+
+		locations[l.location] = true
+		ps := parents[*l]
+		queue = append(queue, ps...)
+	}
+	return len(locations)
 }
