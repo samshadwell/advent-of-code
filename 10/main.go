@@ -5,12 +5,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-)
 
-type Location struct {
-	row int
-	col int
-}
+	"advent-of-code/util/grids"
+)
 
 const maxHeight = 9
 
@@ -22,7 +19,7 @@ func main() {
 	defer file.Close()
 
 	topo := make([][]int, 0, 1)
-	zeroes := make(map[Location]bool)
+	zeroes := make(map[grids.Location]bool)
 
 	scanner := bufio.NewScanner(file)
 	row := 0
@@ -37,7 +34,7 @@ func main() {
 
 			topo[row][col] = height
 			if height == 0 {
-				zeroes[Location{row: row, col: col}] = true
+				zeroes[grids.Location{Row: row, Col: col}] = true
 			}
 		}
 		row++
@@ -54,62 +51,47 @@ func main() {
 	fmt.Printf("Part 2: %d\n", part2)
 }
 
-var offsets = []Location{
-	{-1, 0},
-	{1, 0},
-	{0, -1},
-	{0, 1},
-}
-
-func ReachableSummits(topo [][]int, loc Location) map[Location]bool {
+func ReachableSummits(topo [][]int, loc grids.Location) map[grids.Location]bool {
 	if len(topo) < 1 {
 		log.Fatal("cannot find trails on empty map")
 	}
 
-	if topo[loc.row][loc.col] == maxHeight {
-		return map[Location]bool{{loc.row, loc.col}: true}
+	if topo[loc.Row][loc.Col] == maxHeight {
+		return map[grids.Location]bool{{Row: loc.Row, Col: loc.Col}: true}
 	}
 
-	summits := make(map[Location]bool)
-	for _, offset := range offsets {
-		newR := loc.row + offset.row
-		newC := loc.col + offset.col
-		if newR < 0 || newR >= len(topo) || newC < 0 || newC >= len(topo[0]) {
-			continue
-		} else if topo[newR][newC] != 1+topo[loc.row][loc.col] {
-			continue
+	summits := make(map[grids.Location]bool)
+	grids.EachAdjacent(loc, len(topo), len(topo[0]), func(newL grids.Location) {
+		if topo[newL.Row][newL.Col] != 1+topo[loc.Row][loc.Col] {
+			return
 		}
 
-		rs := ReachableSummits(topo, Location{newR, newC})
+		rs := ReachableSummits(topo, newL)
 		for s := range rs {
 			summits[s] = true
 		}
-	}
+	})
 
 	return summits
 }
 
-func DistinctPaths(topo [][]int, loc Location) int {
+func DistinctPaths(topo [][]int, loc grids.Location) int {
 	if len(topo) < 1 {
 		log.Fatal("cannot find trails on empty map")
 	}
 
-	if topo[loc.row][loc.col] == maxHeight {
+	if topo[loc.Row][loc.Col] == maxHeight {
 		return 1
 	}
 
 	total := 0
-	for _, offset := range offsets {
-		newR := loc.row + offset.row
-		newC := loc.col + offset.col
-		if newR < 0 || newR >= len(topo) || newC < 0 || newC >= len(topo[0]) {
-			continue
-		} else if topo[newR][newC] != 1+topo[loc.row][loc.col] {
-			continue
+	grids.EachAdjacent(loc, len(topo), len(topo[0]), func(newL grids.Location) {
+		if topo[newL.Row][newL.Col] != 1+topo[loc.Row][loc.Col] {
+			return
 		}
 
-		total += DistinctPaths(topo, Location{newR, newC})
-	}
+		total += DistinctPaths(topo, newL)
+	})
 
 	return total
 }
