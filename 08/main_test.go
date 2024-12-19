@@ -3,19 +3,21 @@ package main
 import (
 	"fmt"
 	"testing"
+
+	"advent-of-code/util/grids"
 )
 
-var antennas = map[rune][]Location{
-	'0': {{1, 8}, {2, 5}, {3, 7}, {4, 4}},
-	'A': {{5, 6}, {8, 8}, {9, 9}},
+var antennas = map[rune][]grids.Location{
+	'0': {{Row: 1, Col: 8}, {Row: 2, Col: 5}, {Row: 3, Col: 7}, {Row: 4, Col: 4}},
+	'A': {{Row: 5, Col: 6}, {Row: 8, Col: 8}, {Row: 9, Col: 9}},
 }
 
 var part1Tests = []struct {
-	location Location
+	location grids.Location
 	want     bool
 }{
-	{Location{0, 0}, false},
-	{Location{0, 6}, true},
+	{grids.Location{Row: 0, Col: 0}, false},
+	{grids.Location{Row: 0, Col: 6}, true},
 }
 
 func TestIsPart1Antinode(t *testing.T) {
@@ -31,14 +33,14 @@ func TestIsPart1Antinode(t *testing.T) {
 }
 
 var simplifyTests = []struct {
-	in   Location
-	want Location
+	in   grids.Location
+	want grids.Location
 }{
-	{Location{2, 4}, Location{1, 2}},
-	{Location{-1, 3}, Location{-1, 3}},
-	{Location{10, 10}, Location{1, 1}},
-	{Location{10, 0}, Location{1, 0}},
-	{Location{0, 10}, Location{0, 1}},
+	{grids.Location{Row: 2, Col: 4}, grids.Location{Row: 1, Col: 2}},
+	{grids.Location{Row: -1, Col: 3}, grids.Location{Row: -1, Col: 3}},
+	{grids.Location{Row: 10, Col: 10}, grids.Location{Row: 1, Col: 1}},
+	{grids.Location{Row: 10, Col: 0}, grids.Location{Row: 1, Col: 0}},
+	{grids.Location{Row: 0, Col: 10}, grids.Location{Row: 0, Col: 1}},
 }
 
 func TestSimplifyDisplacement(t *testing.T) {

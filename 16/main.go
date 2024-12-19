@@ -12,10 +12,10 @@ import (
 )
 
 var directions = []grids.Location{
-	{Row: 0, Col: 1},  // East
-	{Row: 1, Col: 0},  // South
-	{Row: 0, Col: -1}, // West
-	{Row: -1, Col: 0}, // North
+	grids.Right(),
+	grids.Down(),
+	grids.Left(),
+	grids.Up(),
 }
 
 // A _loc_ation, _dir_ection tuple. Useful since we care not only about where a given

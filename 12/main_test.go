@@ -1,6 +1,7 @@
 package main
 
 import (
+	"advent-of-code/util/grids"
 	"fmt"
 	"testing"
 )
@@ -13,20 +14,20 @@ var board = [][]rune{
 }
 
 var exploreTests = []struct {
-	start Location
+	start grids.Location
 	want  RegionStats
 }{
-	{Location{0, 0}, RegionStats{area: 4, perimeter: 10, numCorners: 4}},
-	{Location{1, 0}, RegionStats{area: 4, perimeter: 8, numCorners: 4}},
-	{Location{1, 2}, RegionStats{area: 4, perimeter: 10, numCorners: 8}},
-	{Location{1, 3}, RegionStats{area: 1, perimeter: 4, numCorners: 4}},
-	{Location{3, 1}, RegionStats{area: 3, perimeter: 8, numCorners: 4}},
+	{grids.Location{Row: 0, Col: 0}, RegionStats{area: 4, perimeter: 10, numCorners: 4}},
+	{grids.Location{Row: 1, Col: 0}, RegionStats{area: 4, perimeter: 8, numCorners: 4}},
+	{grids.Location{Row: 1, Col: 2}, RegionStats{area: 4, perimeter: 10, numCorners: 8}},
+	{grids.Location{Row: 1, Col: 3}, RegionStats{area: 1, perimeter: 4, numCorners: 4}},
+	{grids.Location{Row: 3, Col: 1}, RegionStats{area: 3, perimeter: 8, numCorners: 4}},
 }
 
 func TestExploreRegion(t *testing.T) {
-	visited := make(map[Location]bool)
+	visited := make(map[grids.Location]bool)
 	for _, tc := range exploreTests {
-		name := fmt.Sprintf("start at (%d,%d)", tc.start.row, tc.start.col)
+		name := fmt.Sprintf("start at (%d,%d)", tc.start.Row, tc.start.Col)
 		t.Run(name, func(t *testing.T) {
 			got, err := ExploreRegion(board, tc.start, visited)
 			if err != nil {

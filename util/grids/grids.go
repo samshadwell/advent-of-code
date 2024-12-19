@@ -2,12 +2,24 @@ package grids
 
 import (
 	"bufio"
-	"os"
+	"io"
 )
 
 type Location struct {
 	Row int
 	Col int
+}
+
+func Up() Location    { return Location{Row: -1, Col: 0} }
+func Down() Location  { return Location{Row: 1, Col: 0} }
+func Left() Location  { return Location{Row: 0, Col: -1} }
+func Right() Location { return Location{Row: 0, Col: 1} }
+
+var cardinalDirections = []Location{
+	Right(),
+	Down(),
+	Left(),
+	Up(),
 }
 
 func (l Location) Plus(other Location) Location {
@@ -17,8 +29,15 @@ func (l Location) Plus(other Location) Location {
 	}
 }
 
-func ParseRuneGrid(file *os.File) [][]rune {
-	scanner := bufio.NewScanner(file)
+func (l Location) Minus(other Location) Location {
+	return Location{
+		Row: l.Row - other.Row,
+		Col: l.Col - other.Col,
+	}
+}
+
+func ParseRuneGrid(reader io.Reader) [][]rune {
+	scanner := bufio.NewScanner(reader)
 	grid := make([][]rune, 0)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -38,15 +57,8 @@ func FindRune(grid [][]rune, toFind rune) (Location, bool) {
 	return Location{}, false
 }
 
-var directions = []Location{
-	{0, 1},
-	{-1, 0},
-	{0, -1},
-	{1, 0},
-}
-
 func EachAdjacent(loc Location, numRows, numCols int, cb func(loc Location)) {
-	for _, d := range directions {
+	for _, d := range cardinalDirections {
 		new := loc.Plus(d)
 		if IsOutOfBounds(new, numRows, numCols) {
 			continue

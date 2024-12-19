@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"log"
@@ -10,19 +9,16 @@ import (
 	"strings"
 	"time"
 
+	"advent-of-code/util/grids"
+
 	"github.com/pterm/pterm"
 )
 
-type position struct {
-	row int
-	col int
-}
-
-var directions = []struct{ deltaR, deltaC int }{
-	{deltaR: -1, deltaC: 0}, // Up
-	{deltaR: 0, deltaC: 1},  // Right
-	{deltaR: 1, deltaC: 0},  // Down
-	{deltaR: 0, deltaC: -1}, // Left
+var directions = []grids.Location{
+	grids.Up(),
+	grids.Right(),
+	grids.Down(),
+	grids.Left(),
 }
 
 var printFlag = flag.Bool("print", false, "Set to print a visualization of walking to console")
@@ -58,12 +54,12 @@ func main() {
 
 	part2 := 0
 	for pos := range baseRun.squaresVisited {
-		board[pos.row][pos.col] = '#'
+		board[pos.Row][pos.Col] = '#'
 		loopRun := run(nil, board, start)
 		if !loopRun.terminates {
 			part2 += 1
 		}
-		board[pos.row][pos.col] = '.'
+		board[pos.Row][pos.Col] = '.'
 	}
 
 	fmt.Printf("Part 1: %d\n", len(baseRun.squaresVisited))
@@ -81,32 +77,19 @@ func main() {
 	}
 }
 
-func parseInput() ([][]rune, position) {
+func parseInput() ([][]rune, grids.Location) {
 	file, err := os.Open(*inputFlag)
 	if err != nil {
 		log.Fatalf("failed to open file: %v", err)
 	}
 	defer file.Close()
-	scanner := bufio.NewScanner(file)
-
-	board := make([][]rune, 0)
-	start := position{-1, -1}
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		runes := []rune(line)
-		for i, c := range runes {
-			if c == '^' {
-				start = position{len(board), i}
-				runes[i] = '.'
-			}
-		}
-		board = append(board, []rune(line))
+	board := grids.ParseRuneGrid(file)
+	start, ok := grids.FindRune(board, '^')
+	if !ok {
+		log.Fatalf("failed to find guard position")
 	}
+	board[start.Row][start.Col] = '.'
 
-	if start.row == -1 && start.col == -1 {
-		log.Fatalf("Did not find guard position while parsing board")
-	}
 	if len(board) == 0 {
 		log.Fatalf("Did not parse any rows of board")
 	}
@@ -115,12 +98,11 @@ func parseInput() ([][]rune, position) {
 			log.Fatalf("Board is not square")
 		}
 	}
-
 	return board, start
 }
 
 type runResult struct {
-	squaresVisited map[position][]visitInfo
+	squaresVisited map[grids.Location][]visitInfo
 	terminates     bool
 }
 
@@ -129,17 +111,18 @@ type visitInfo struct {
 	sequence  int
 }
 
-func run(printer *pterm.AreaPrinter, board [][]rune, start position) runResult {
-	sequence := 0
+func run(printer *pterm.AreaPrinter, board [][]rune, start grids.Location) runResult {
 	pos := start
 	dir := 0
-	visited := make(map[position][]visitInfo, len(board))
+	sequence := 0
+	visited := make(map[grids.Location][]visitInfo)
+
 	for {
 		sequence += 1
 		printBoard(printer, board, pos, dir, visited)
 
 		if _, ok := visited[pos]; !ok {
-			visited[pos] = make([]visitInfo, 0, 4)
+			visited[pos] = make([]visitInfo, 0)
 		}
 		for _, priorVisit := range visited[pos] {
 			if priorVisit.direction == dir {
@@ -155,16 +138,13 @@ func run(printer *pterm.AreaPrinter, board [][]rune, start position) runResult {
 			sequence:  sequence,
 		})
 
-		newPos := position{
-			row: pos.row + directions[dir].deltaR,
-			col: pos.col + directions[dir].deltaC,
-		}
+		newPos := pos.Plus(directions[dir])
 
-		if isOffBoard(board, newPos) {
+		if grids.IsOutOfBounds(newPos, len(board), len(board[0])) {
 			break
 		}
 
-		if board[newPos.row][newPos.col] == '#' {
+		if board[newPos.Row][newPos.Col] == '#' {
 			dir = nextDir(dir)
 		} else {
 			pos = newPos
@@ -177,18 +157,13 @@ func run(printer *pterm.AreaPrinter, board [][]rune, start position) runResult {
 	}
 }
 
-func isOffBoard(board [][]rune, pos position) bool {
-	return pos.row < 0 || pos.row >= len(board) ||
-		pos.col < 0 || pos.col >= len(board[0])
-}
-
 func nextDir(dir int) int {
 	return (dir + 1) % len(directions)
 }
 
 var guardIcons = []rune{'↑', '→', '↓', '←'}
 
-func printBoard(printer *pterm.AreaPrinter, board [][]rune, pos position, dir int, visited map[position][]visitInfo) {
+func printBoard(printer *pterm.AreaPrinter, board [][]rune, pos grids.Location, dir int, visited map[grids.Location][]visitInfo) {
 	if printer == nil {
 		return
 	}
@@ -197,16 +172,15 @@ func printBoard(printer *pterm.AreaPrinter, board [][]rune, pos position, dir in
 	var b strings.Builder
 	for rIdx, row := range board {
 		for cIdx, r := range row {
-			if rIdx == pos.row && cIdx == pos.col {
+			if rIdx == pos.Row && cIdx == pos.Col {
 				b.WriteRune(guardIcons[dir])
-			} else if vi, ok := visited[position{rIdx, cIdx}]; ok {
+			} else if vi, ok := visited[grids.Location{Row: rIdx, Col: cIdx}]; ok {
 				b.WriteRune(guardIcons[vi[len(vi)-1].direction])
 			} else {
 				b.WriteRune(r)
 			}
 		}
-		b.WriteString("\n")
+		b.WriteRune('\n')
 	}
-
 	printer.Update(b.String())
 }
