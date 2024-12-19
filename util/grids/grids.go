@@ -38,6 +38,23 @@ func FindRune(grid [][]rune, toFind rune) (Location, bool) {
 	return Location{}, false
 }
 
-func IsOutOfBounds(grid [][]rune, loc Location) bool {
-	return loc.Row < 0 || loc.Col < 0 || loc.Row >= len(grid) || loc.Col >= len(grid[loc.Row])
+var directions = []Location{
+	{0, 1},
+	{-1, 0},
+	{0, -1},
+	{1, 0},
+}
+
+func EachAdjacent(loc Location, numRows, numCols int, cb func(loc Location)) {
+	for _, d := range directions {
+		new := loc.Plus(d)
+		if IsOutOfBounds(new, numRows, numCols) {
+			continue
+		}
+		cb(new)
+	}
+}
+
+func IsOutOfBounds(loc Location, numRows, numCols int) bool {
+	return loc.Row < 0 || loc.Col < 0 || loc.Row >= numRows || loc.Col >= numCols
 }
