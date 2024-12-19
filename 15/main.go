@@ -107,10 +107,10 @@ func DoAllMoves(printer *pterm.AreaPrinter, board [][]rune, moves []rune) (grids
 	return robot, nil
 }
 
-var left = grids.Location{Row: 0, Col: -1}
-var right = grids.Location{Row: 0, Col: 1}
-var up = grids.Location{Row: -1, Col: 0}
-var down = grids.Location{Row: 1, Col: 0}
+var left = grids.Left()
+var right = grids.Right()
+var up = grids.Up()
+var down = grids.Down()
 
 var directionMap = map[rune]grids.Location{
 	'<': left,

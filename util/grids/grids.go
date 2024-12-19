@@ -10,6 +10,18 @@ type Location struct {
 	Col int
 }
 
+func Up() Location    { return Location{Row: -1, Col: 0} }
+func Down() Location  { return Location{Row: 1, Col: 0} }
+func Left() Location  { return Location{Row: 0, Col: -1} }
+func Right() Location { return Location{Row: 0, Col: 1} }
+
+var cardinalDirections = []Location{
+	Right(),
+	Down(),
+	Left(),
+	Up(),
+}
+
 func (l Location) Plus(other Location) Location {
 	return Location{
 		Row: l.Row + other.Row,
@@ -43,13 +55,6 @@ func FindRune(grid [][]rune, toFind rune) (Location, bool) {
 		}
 	}
 	return Location{}, false
-}
-
-var cardinalDirections = []Location{
-	{0, 1},
-	{-1, 0},
-	{0, -1},
-	{1, 0},
 }
 
 func EachAdjacent(loc Location, numRows, numCols int, cb func(loc Location)) {

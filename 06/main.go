@@ -15,10 +15,10 @@ import (
 )
 
 var directions = []grids.Location{
-	{Row: -1, Col: 0}, // Up
-	{Row: 0, Col: 1},  // Right
-	{Row: 1, Col: 0},  // Down
-	{Row: 0, Col: -1}, // Left
+	grids.Up(),
+	grids.Right(),
+	grids.Down(),
+	grids.Left(),
 }
 
 var printFlag = flag.Bool("print", false, "Set to print a visualization of walking to console")

@@ -63,21 +63,21 @@ func ComputeCosts(board [][]rune) (int, int) {
 }
 
 var baseDirections = []grids.Location{
-	{Row: -1, Col: 0},
-	{Row: 1, Col: 0},
-	{Row: 0, Col: -1},
-	{Row: 0, Col: 1},
+	grids.Up(),
+	grids.Down(),
+	grids.Left(),
+	grids.Right(),
 }
 
 var allDirections = []grids.Location{
-	{Row: -1, Col: -1}, // Upper left
-	{Row: -1, Col: 0},  // Above
-	{Row: -1, Col: 1},  // Upper right
-	{Row: 0, Col: 1},   // Right
-	{Row: 1, Col: 1},   // Lower right
-	{Row: 1, Col: 0},   // Below
-	{Row: 1, Col: -1},  // Lower left
-	{Row: 0, Col: -1},  // Left
+	grids.Up().Plus(grids.Left()),
+	grids.Up(),
+	grids.Up().Plus(grids.Right()),
+	grids.Right(),
+	grids.Down().Plus(grids.Right()),
+	grids.Down(),
+	grids.Down().Plus(grids.Left()),
+	grids.Left(),
 }
 
 // Indexes in above array that represent the four possible "convex" type corners, as in:
