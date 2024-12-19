@@ -5,19 +5,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	"advent-of-code/util/grids"
 )
-
-type Location struct {
-	row int
-	col int
-}
-
-func (l *Location) Plus(other Location) Location {
-	return Location{
-		row: l.row + other.row,
-		col: l.col + other.col,
-	}
-}
 
 type RegionStats struct {
 	area       int
@@ -53,43 +43,41 @@ func ComputeCosts(board [][]rune) (int, int) {
 		return 0, 0
 	}
 
-	numRows := len(board)
-	numCols := len(board[0])
-	visited := make(map[Location]bool, numRows*numCols)
+	part1 := 0
+	part2 := 0
+	visited := make(map[grids.Location]bool)
 
-	part1Cost := 0
-	part2Cost := 0
-	for r := 0; r < numRows; r++ {
-		for c := 0; c < numCols; c++ {
-			l := Location{r, c}
-			stats, err := ExploreRegion(board, l, visited)
+	for row := range board {
+		for col := range board[row] {
+			loc := grids.Location{Row: row, Col: col}
+			stats, err := ExploreRegion(board, loc, visited)
 			if err != nil {
 				log.Fatalf("error while exploring region: %v", err)
 			}
-			part1Cost += stats.area * stats.perimeter
-			part2Cost += stats.area * stats.numCorners
+			part1 += stats.area * stats.perimeter
+			part2 += stats.area * stats.numCorners
 		}
 	}
 
-	return part1Cost, part2Cost
+	return part1, part2
 }
 
-var baseDirections = []Location{
-	{-1, 0},
-	{1, 0},
-	{0, -1},
-	{0, 1},
+var baseDirections = []grids.Location{
+	{Row: -1, Col: 0},
+	{Row: 1, Col: 0},
+	{Row: 0, Col: -1},
+	{Row: 0, Col: 1},
 }
 
-var allDirections = []Location{
-	{-1, -1}, // Upper left
-	{-1, 0},  // Above
-	{-1, 1},  // Upper right
-	{0, 1},   // Right
-	{1, 1},   // Lower right
-	{1, 0},   // Below
-	{1, -1},  // Lower left
-	{0, -1},  // Left
+var allDirections = []grids.Location{
+	{Row: -1, Col: -1}, // Upper left
+	{Row: -1, Col: 0},  // Above
+	{Row: -1, Col: 1},  // Upper right
+	{Row: 0, Col: 1},   // Right
+	{Row: 1, Col: 1},   // Lower right
+	{Row: 1, Col: 0},   // Below
+	{Row: 1, Col: -1},  // Lower left
+	{Row: 0, Col: -1},  // Left
 }
 
 // Indexes in above array that represent the four possible "convex" type corners, as in:
@@ -120,9 +108,11 @@ var concaveCorners = [][]int{
 	{5, 7},
 }
 
-func ExploreRegion(board [][]rune, start Location, visited map[Location]bool) (RegionStats, error) {
-	if OutOfBounds(board, start) {
-		return RegionStats{}, fmt.Errorf("cannot start exploration off of board at (%d,%d)", start.row, start.col)
+func ExploreRegion(board [][]rune, start grids.Location, visited map[grids.Location]bool) (RegionStats, error) {
+	numRows := len(board)
+	numCols := len(board[0])
+	if grids.IsOutOfBounds(start, numRows, numCols) {
+		return RegionStats{}, fmt.Errorf("cannot start exploration off of board at (%d,%d)", start.Row, start.Col)
 	}
 
 	if visited[start] {
@@ -131,7 +121,7 @@ func ExploreRegion(board [][]rune, start Location, visited map[Location]bool) (R
 	}
 
 	visited[start] = true
-	label := board[start.row][start.col]
+	label := board[start.Row][start.Col]
 
 	area := 1
 	perimeter := 0
@@ -139,7 +129,7 @@ func ExploreRegion(board [][]rune, start Location, visited map[Location]bool) (R
 
 	for _, d := range baseDirections {
 		next := start.Plus(d)
-		if OutOfBounds(board, next) || board[next.row][next.col] != label {
+		if grids.IsOutOfBounds(next, numRows, numCols) || board[next.Row][next.Col] != label {
 			perimeter += 1
 		} else {
 			explored, err := ExploreRegion(board, next, visited)
@@ -172,13 +162,9 @@ func ExploreRegion(board [][]rune, start Location, visited map[Location]bool) (R
 	return RegionStats{area: area, perimeter: perimeter, numCorners: numCorners}, nil
 }
 
-func OutOfBounds(board [][]rune, loc Location) bool {
-	return loc.row < 0 || loc.col < 0 || loc.row >= len(board) || loc.col >= len(board[loc.row])
-}
-
-func GetOrDefault(board [][]rune, loc Location, r rune) rune {
-	if OutOfBounds(board, loc) {
+func GetOrDefault(board [][]rune, loc grids.Location, r rune) rune {
+	if grids.IsOutOfBounds(loc, len(board), len(board[0])) {
 		return r
 	}
-	return board[loc.row][loc.col]
+	return board[loc.Row][loc.Col]
 }
