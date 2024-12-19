@@ -7,12 +7,9 @@ import (
 	"math/big"
 	"os"
 	"slices"
-)
 
-type Location struct {
-	row int
-	col int
-}
+	"advent-of-code/util/grids"
+)
 
 func main() {
 	file, err := os.Open("input.txt")
@@ -22,7 +19,7 @@ func main() {
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
 
-	antennas := make(map[rune][]Location)
+	antennas := make(map[rune][]grids.Location)
 	row := 0
 	numCols := -1
 	for scanner.Scan() {
@@ -40,9 +37,9 @@ func main() {
 			}
 
 			if _, ok := antennas[r]; !ok {
-				antennas[r] = make([]Location, 0, 10)
+				antennas[r] = make([]grids.Location, 0, 10)
 			}
-			antennas[r] = append(antennas[r], Location{row, col})
+			antennas[r] = append(antennas[r], grids.Location{Row: row, Col: col})
 		}
 		row++
 	}
@@ -52,13 +49,13 @@ func main() {
 	part1 := 0
 	for r := 0; r < numRows; r++ {
 		for c := 0; c < numCols; c++ {
-			if IsPart1Antinode(Location{r, c}, antennas) {
+			if IsPart1Antinode(grids.Location{Row: r, Col: c}, antennas) {
 				part1++
 			}
 		}
 	}
 
-	part2Locations := make(map[Location]bool)
+	part2Locations := make(map[grids.Location]bool)
 	for _, as := range antennas {
 		// For each pair of antennas (a1, a2), add all the locations along the vector pointing from a1 -> a2
 		for _, a1 := range as {
@@ -66,14 +63,15 @@ func main() {
 				if a1 == a2 {
 					continue
 				}
-				slope := SimplifyDisplacement(Location{a1.row - a2.row, a1.col - a2.col})
+				d := a1.Minus(a2)
+				slope := SimplifyDisplacement(d)
 				part2Locations[a1] = true
 				for n := 1; ; n++ {
-					res := Location{
-						n*slope.row + a1.row,
-						n*slope.col + a1.col,
+					res := grids.Location{
+						Row: n*slope.Row + a1.Row,
+						Col: n*slope.Col + a1.Col,
 					}
-					if res.row < 0 || res.col < 0 || res.row >= numRows || res.col >= numCols {
+					if res.Row < 0 || res.Col < 0 || res.Row >= numRows || res.Col >= numCols {
 						break
 					}
 					part2Locations[res] = true
@@ -86,17 +84,14 @@ func main() {
 	fmt.Printf("Part 2: %d\n", len(part2Locations))
 }
 
-func IsPart1Antinode(loc Location, antennas map[rune][]Location) bool {
+func IsPart1Antinode(loc grids.Location, antennas map[rune][]grids.Location) bool {
 	for _, locations := range antennas {
 		for _, a1 := range locations {
-			displacement := Location{a1.row - loc.row, a1.col - loc.col}
-			if displacement.row == 0 && displacement.col == 0 {
+			displacement := a1.Minus(loc)
+			if displacement.Row == 0 && displacement.Col == 0 {
 				continue
 			}
-			a2 := Location{
-				loc.row + 2*displacement.row,
-				loc.col + 2*displacement.col,
-			}
+			a2 := loc.Plus(displacement).Plus(displacement)
 			if slices.Contains(locations, a2) {
 				return true
 			}
@@ -105,17 +100,17 @@ func IsPart1Antinode(loc Location, antennas map[rune][]Location) bool {
 	return false
 }
 
-func SimplifyDisplacement(d Location) Location {
-	r := big.NewInt(int64(d.row))
-	c := big.NewInt(int64(d.col))
+func SimplifyDisplacement(d grids.Location) grids.Location {
+	r := big.NewInt(int64(d.Row))
+	c := big.NewInt(int64(d.Col))
 
 	var z, newR, newC big.Int
 	z.GCD(nil, nil, r, c)
 
 	newR.Div(r, &z)
 	newC.Div(c, &z)
-	return Location{
-		row: int(newR.Int64()),
-		col: int(newC.Int64()),
+	return grids.Location{
+		Row: int(newR.Int64()),
+		Col: int(newC.Int64()),
 	}
 }

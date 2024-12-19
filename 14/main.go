@@ -8,6 +8,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"advent-of-code/util/grids"
+	"advent-of-code/util/mymath"
 )
 
 type Robot struct {
@@ -16,8 +19,6 @@ type Robot struct {
 
 const width = 101
 const height = 103
-
-type position struct{ x, y int }
 
 func main() {
 	file, err := os.Open("input.txt")
@@ -53,10 +54,10 @@ func main() {
 
 	n := 0
 	for ; true; n++ {
-		uniquePositions := make(map[position]bool)
+		uniquePositions := make(map[grids.Location]bool)
 		for _, r := range robots {
 			x, y := r.AfterNSeconds(n, width, height)
-			uniquePositions[position{x, y}] = true
+			uniquePositions[grids.Location{Row: y, Col: x}] = true
 		}
 
 		// A bit cheeky... I guessed that all the robots would be in unique positions iff they were in the easter egg
@@ -101,30 +102,20 @@ func ParseRobot(in string) (Robot, error) {
 }
 
 func (r *Robot) AfterNSeconds(n, width, height int) (int, int) {
-	return PMod(n*r.Vx+r.X, width), PMod(n*r.Vy+r.Y, height)
-}
-
-// (P)ositive (Mod)ulus. AKA what % does in most other languages
-func PMod(n, d int) int {
-	m := n % d
-	if m < 0 {
-		return d + m
-	}
-	return m
-
+	return mymath.PMod(n*r.Vx+r.X, width), mymath.PMod(n*r.Vy+r.Y, height)
 }
 
 func Plot(robots []Robot, secondsElapsed, width, height int) string {
-	positions := make(map[position]int)
+	positions := make(map[grids.Location]int)
 	for _, r := range robots {
 		x, y := r.AfterNSeconds(secondsElapsed, width, height)
-		positions[position{x, y}]++
+		positions[grids.Location{Row: y, Col: x}]++
 	}
 
 	var sb strings.Builder
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			count := positions[position{x, y}]
+			count := positions[grids.Location{Row: y, Col: x}]
 			if count == 0 {
 				sb.WriteRune('.')
 			} else if count < 10 {
