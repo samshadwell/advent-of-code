@@ -17,6 +17,13 @@ func (l Location) Plus(other Location) Location {
 	}
 }
 
+func (l Location) Minus(other Location) Location {
+	return Location{
+		Row: l.Row - other.Row,
+		Col: l.Col - other.Col,
+	}
+}
+
 func ParseRuneGrid(reader io.Reader) [][]rune {
 	scanner := bufio.NewScanner(reader)
 	grid := make([][]rune, 0)

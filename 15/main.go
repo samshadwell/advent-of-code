@@ -10,20 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"advent-of-code/util/grids"
+
 	"github.com/pterm/pterm"
 )
-
-type Location struct {
-	row int
-	col int
-}
-
-func (l Location) Plus(other Location) Location {
-	return Location{
-		row: l.row + other.row,
-		col: l.col + other.col,
-	}
-}
 
 var inputFlag = flag.String("file", "input.txt", "File to read as input")
 var printFlag = flag.Bool("print", false, "Set to display simulation of walking")
@@ -95,69 +85,60 @@ func main() {
 	fmt.Printf("Part 2: %d\n", part2)
 }
 
-func DoAllMoves(printer *pterm.AreaPrinter, board [][]rune, moves []rune) (Location, error) {
-	robot, err := findAndReplaceRobot(board)
-	if err != nil {
-		return Location{}, err
+func DoAllMoves(printer *pterm.AreaPrinter, board [][]rune, moves []rune) (grids.Location, error) {
+	robot, ok := grids.FindRune(board, '@')
+	if !ok {
+		return grids.Location{}, errors.New("failed to find robot on board")
 	}
+	board[robot.Row][robot.Col] = '.'
 
+	var err error
 	for _, move := range moves {
 		robot, err = moveRobot(board, move, robot)
 		if err != nil {
-			return Location{}, err
+			return grids.Location{}, err
 		}
 
 		if printer != nil {
-			time.Sleep(time.Millisecond * time.Duration(*delayFlag))
 			printer.Update(Render(board, robot))
+			time.Sleep(time.Duration(*delayFlag) * time.Millisecond)
 		}
 	}
 	return robot, nil
 }
 
-func findAndReplaceRobot(board [][]rune) (Location, error) {
-	for rIdx, row := range board {
-		for cIdx, rune := range row {
-			if rune == '@' {
-				board[rIdx][cIdx] = '.'
-				return Location{rIdx, cIdx}, nil
-			}
-		}
-	}
-	return Location{}, errors.New("failed to find robot on board")
-}
+var left = grids.Location{Row: 0, Col: -1}
+var right = grids.Location{Row: 0, Col: 1}
+var up = grids.Location{Row: -1, Col: 0}
+var down = grids.Location{Row: 1, Col: 0}
 
-var left = Location{row: 0, col: -1}
-var right = Location{row: 0, col: 1}
-var down = Location{row: 1, col: 0}
-var up = Location{row: -1, col: 0}
-
-var moves = map[rune]Location{
-	'v': down,
+var directionMap = map[rune]grids.Location{
+	'<': left,
 	'>': right,
 	'^': up,
-	'<': left,
+	'v': down,
 }
 
-func moveRobot(board [][]rune, move rune, start Location) (Location, error) {
-	direction, ok := moves[move]
+func moveRobot(board [][]rune, move rune, start grids.Location) (grids.Location, error) {
+	direction, ok := directionMap[move]
 	if !ok {
-		return Location{}, fmt.Errorf("unrecognized move direction '%c'", move)
+		return grids.Location{}, fmt.Errorf("unrecognized move %c", move)
 	}
-	nextLoc := start.Plus(direction)
-	if canVacate(board, nextLoc, direction) {
-		err := doVacate(board, nextLoc, direction)
-		if err != nil {
-			return Location{}, err
-		}
-		return nextLoc, nil
+
+	next := start.Plus(direction)
+	if !canVacate(board, next, direction) {
+		return start, nil
 	}
-	return start, nil
+
+	if err := doVacate(board, next, direction); err != nil {
+		return grids.Location{}, err
+	}
+	return next, nil
 }
 
 // Returns true if given location is empty, or if it can become empty by moving contents in given direction
-func canVacate(board [][]rune, loc Location, direction Location) bool {
-	contents := board[loc.row][loc.col]
+func canVacate(board [][]rune, loc grids.Location, direction grids.Location) bool {
+	contents := board[loc.Row][loc.Col]
 
 	switch contents {
 	case '.':
@@ -188,8 +169,8 @@ func canVacate(board [][]rune, loc Location, direction Location) bool {
 }
 
 // At end of function call, loc is empty and any items on it have been moved in the given direction
-func doVacate(board [][]rune, loc Location, direction Location) error {
-	contents := board[loc.row][loc.col]
+func doVacate(board [][]rune, loc grids.Location, direction grids.Location) error {
+	contents := board[loc.Row][loc.Col]
 
 	switch contents {
 	case '.':
@@ -202,8 +183,8 @@ func doVacate(board [][]rune, loc Location, direction Location) error {
 		if err != nil {
 			return err
 		}
-		board[next.row][next.col] = board[loc.row][loc.col]
-		board[loc.row][loc.col] = '.'
+		board[next.Row][next.Col] = board[loc.Row][loc.Col]
+		board[loc.Row][loc.Col] = '.'
 		return nil
 	case ']':
 		return doVacate(board, loc.Plus(left), direction)
@@ -215,20 +196,20 @@ func doVacate(board [][]rune, loc Location, direction Location) error {
 			if err != nil {
 				return err
 			}
-			board[next.row][next.col] = board[loc.row][loc.col]
-			board[loc.row][loc.col] = ']'
+			board[next.Row][next.Col] = board[loc.Row][loc.Col]
+			board[loc.Row][loc.Col] = ']'
 			r := loc.Plus(right)
-			board[r.row][r.col] = '.'
+			board[r.Row][r.Col] = '.'
 		case right:
 			next := loc.Plus(direction).Plus(direction)
 			err := doVacate(board, next, direction)
 			if err != nil {
 				return err
 			}
-			board[next.row][next.col] = ']'
+			board[next.Row][next.Col] = ']'
 			l := next.Plus(left)
-			board[l.row][l.col] = '['
-			board[loc.row][loc.col] = '.'
+			board[l.Row][l.Col] = '['
+			board[loc.Row][loc.Col] = '.'
 		case up, down:
 			r := loc.Plus(right)
 			nextL := loc.Plus(direction)
@@ -241,10 +222,10 @@ func doVacate(board [][]rune, loc Location, direction Location) error {
 			if err != nil {
 				return err
 			}
-			board[nextL.row][nextL.col] = '['
-			board[nextR.row][nextR.col] = ']'
-			board[loc.row][loc.col] = '.'
-			board[r.row][r.col] = '.'
+			board[nextL.Row][nextL.Col] = '['
+			board[nextR.Row][nextR.Col] = ']'
+			board[loc.Row][loc.Col] = '.'
+			board[r.Row][r.Col] = '.'
 		}
 		return nil
 	default:
@@ -252,17 +233,17 @@ func doVacate(board [][]rune, loc Location, direction Location) error {
 	}
 }
 
-func Render(board [][]rune, robot Location) string {
+func Render(board [][]rune, robot grids.Location) string {
 	var sb strings.Builder
 	for rIdx, row := range board {
 		for cIdx, rune := range row {
-			if robot.row == rIdx && robot.col == cIdx {
+			if robot.Row == rIdx && robot.Col == cIdx {
 				sb.WriteRune('@')
 			} else {
 				sb.WriteRune(rune)
 			}
 		}
-		sb.WriteString("\n")
+		sb.WriteRune('\n')
 	}
 	return sb.String()
 }
