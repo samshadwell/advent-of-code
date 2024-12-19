@@ -24,11 +24,8 @@ func TestBfs(t *testing.T) {
 	goal := grids.Location{Col: 6, Row: 6}
 	want := 22
 
-	path, err := bfs(corrupt, start, goal)
+	path := bfs(corrupt, start, goal)
 	got := len(path) - 1
-	if err != nil {
-		t.Fatalf("wanted part1 to return nil error, got: %v", err)
-	}
 
 	if want != got {
 		t.Fatalf("call to part1 did not return expected value. want: %d, got: %d", want, got)

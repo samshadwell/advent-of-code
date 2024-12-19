@@ -3,7 +3,6 @@ package main
 import (
 	"advent-of-code/util/grids"
 	"bufio"
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -42,22 +41,19 @@ func main() {
 		input = append(input, grids.Location{Col: c, Row: r})
 	}
 
-	path, err := bfs(input[:1024], start, goal)
-	if err != nil {
-		log.Fatalf("error in call to part1: %v", err)
-	}
-
+	path := bfs(input[:1024], start, goal)
 	fmt.Printf("Part 1: %d\n", len(path)-1)
 
 	lastIdx := 1024
 	for ; lastIdx < len(input); lastIdx++ {
 		if _, ok := path[input[lastIdx]]; !ok {
-			// If the next fallen byte isn't on the current escape route anyway, don't re-run BFS
+			// If the fallen byte isn't on the current escape route anyway, don't re-run BFS
 			continue
 		}
 
-		path, err = bfs(input[:lastIdx+1], start, goal)
-		if err != nil {
+		// Implicit else: previous escape route is now blocked, try a different route
+		path = bfs(input[:lastIdx+1], start, goal)
+		if path == nil {
 			break
 		}
 	}
@@ -65,7 +61,8 @@ func main() {
 	fmt.Printf("Part 2: %d,%d\n", lastByte.Col, lastByte.Row)
 }
 
-func bfs(corrupt []grids.Location, start, goal grids.Location) (map[grids.Location]bool, error) {
+// Returns the set of nodes along one of the shortest paths from start to goal, or nil if no path exists
+func bfs(corrupt []grids.Location, start, goal grids.Location) map[grids.Location]bool {
 	corrupted := make(map[grids.Location]bool, len(corrupt))
 	for _, loc := range corrupt {
 		corrupted[loc] = true
@@ -89,7 +86,7 @@ func bfs(corrupt []grids.Location, start, goal grids.Location) (map[grids.Locati
 	}
 
 	if _, ok := parents[goal]; !ok {
-		return nil, errors.New("did not find path to end")
+		return nil
 	}
 
 	path := make(map[grids.Location]bool, 0)
@@ -97,5 +94,5 @@ func bfs(corrupt []grids.Location, start, goal grids.Location) (map[grids.Locati
 		path[*l] = true
 	}
 
-	return path, nil
+	return path
 }
