@@ -10,6 +10,12 @@ import (
 	"os"
 )
 
+const (
+	part1NumCheats = 2
+	part2NumCheats = 20
+	scoreThreshold = 100
+)
+
 type input struct {
 	track      [][]rune
 	start, end grids.Location
@@ -30,8 +36,8 @@ func main() {
 		log.Fatalf("error while traversing route from start to end: %v", err)
 	}
 
-	part1 := countGoodCheats(in.track, ordering, 2, 100)
-	part2 := countGoodCheats(in.track, ordering, 20, 100)
+	part1 := countGoodCheats(in.track, ordering, part1NumCheats, scoreThreshold)
+	part2 := countGoodCheats(in.track, ordering, part2NumCheats, scoreThreshold)
 
 	fmt.Printf("Part 1: %d\n", part1)
 	fmt.Printf("Part 2: %d\n", part2)
@@ -84,13 +90,14 @@ func getOrdering(in input) (map[grids.Location]int, error) {
 func countGoodCheats(track [][]rune, ordering map[grids.Location]int, cheatSteps, threshold int) int {
 	count := 0
 	for start, startOrd := range ordering {
-		for numUp := -cheatSteps; numUp <= cheatSteps; numUp++ {
-			stepsRemaining := cheatSteps - mymath.IntAbs(numUp)
-			for numRight := -stepsRemaining; numRight <= stepsRemaining; numRight++ {
-				vecUp := grids.Up().ScalarMult(numUp)
-				vecSide := grids.Left().ScalarMult(numRight)
+		for stepsUp := -cheatSteps; stepsUp <= cheatSteps; stepsUp++ {
+			stepsRemaining := cheatSteps - mymath.IntAbs(stepsUp)
 
-				end := start.Plus(vecUp).Plus(vecSide)
+			for stepsRight := -stepsRemaining; stepsRight <= stepsRemaining; stepsRight++ {
+				dX := grids.Right().ScalarMult(stepsRight)
+				dY := grids.Up().ScalarMult(stepsUp)
+
+				end := start.Plus(dX).Plus(dY)
 				if grids.GetOrDefault(track, end, '#') == '#' {
 					continue
 				}
