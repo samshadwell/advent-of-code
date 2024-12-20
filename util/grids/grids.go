@@ -36,6 +36,13 @@ func (l Location) Minus(other Location) Location {
 	}
 }
 
+func (l Location) ScalarMult(n int) Location {
+	return Location{
+		Row: n * l.Row,
+		Col: n * l.Col,
+	}
+}
+
 func ParseRuneGrid(reader io.Reader) [][]rune {
 	scanner := bufio.NewScanner(reader)
 	grid := make([][]rune, 0)

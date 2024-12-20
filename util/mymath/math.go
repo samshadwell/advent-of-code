@@ -14,3 +14,10 @@ func PMod(n, d int) int {
 	}
 	return mod
 }
+
+func IntAbs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
+}
