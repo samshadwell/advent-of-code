@@ -77,3 +77,10 @@ func EachAdjacent(loc Location, numRows, numCols int, cb func(loc Location)) {
 func IsOutOfBounds(loc Location, numRows, numCols int) bool {
 	return loc.Row < 0 || loc.Col < 0 || loc.Row >= numRows || loc.Col >= numCols
 }
+
+func GetOrDefault(board [][]rune, loc Location, r rune) rune {
+	if IsOutOfBounds(loc, len(board), len(board[0])) {
+		return r
+	}
+	return board[loc.Row][loc.Col]
+}

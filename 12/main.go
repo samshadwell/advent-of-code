@@ -145,7 +145,7 @@ func ExploreRegion(board [][]rune, start grids.Location, visited map[grids.Locat
 	differences := make([]bool, len(allDirections))
 	for i, d := range allDirections {
 		newLoc := start.Plus(d)
-		differences[i] = label != GetOrDefault(board, newLoc, '.')
+		differences[i] = label != grids.GetOrDefault(board, newLoc, '.')
 	}
 
 	for _, c := range convexCorners {
@@ -160,11 +160,4 @@ func ExploreRegion(board [][]rune, start grids.Location, visited map[grids.Locat
 	}
 
 	return RegionStats{area: area, perimeter: perimeter, numCorners: numCorners}, nil
-}
-
-func GetOrDefault(board [][]rune, loc grids.Location, r rune) rune {
-	if grids.IsOutOfBounds(loc, len(board), len(board[0])) {
-		return r
-	}
-	return board[loc.Row][loc.Col]
 }

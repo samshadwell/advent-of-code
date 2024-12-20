@@ -63,7 +63,7 @@ func getOrdering(in input) (map[grids.Location]int, error) {
 		var next grids.Location
 		grids.EachAdjacent(current, len(in.track), len(in.track[0]), func(loc grids.Location) {
 			_, explored := ordering[loc]
-			if in.track[loc.Row][loc.Col] != '#' && !explored {
+			if grids.GetOrDefault(in.track, loc, '#') != '#' && !explored {
 				next = loc
 				found = true
 				return
@@ -83,19 +83,15 @@ func getOrdering(in input) (map[grids.Location]int, error) {
 
 func countGoodCheats(track [][]rune, ordering map[grids.Location]int, cheatSteps, threshold int) int {
 	count := 0
-	numRows := len(track)
-	numCols := len(track[0])
-
-	for start := range ordering {
-		startOrd := ordering[start]
+	for start, startOrd := range ordering {
 		for numUp := -cheatSteps; numUp <= cheatSteps; numUp++ {
 			stepsRemaining := cheatSteps - mymath.IntAbs(numUp)
 			for numRight := -stepsRemaining; numRight <= stepsRemaining; numRight++ {
-				amountUp := grids.Up().ScalarMult(numUp)
-				amountSide := grids.Left().ScalarMult(numRight)
+				vecUp := grids.Up().ScalarMult(numUp)
+				vecSide := grids.Left().ScalarMult(numRight)
 
-				end := start.Plus(amountUp).Plus(amountSide)
-				if grids.IsOutOfBounds(end, numRows, numCols) || track[end.Row][end.Col] == '#' {
+				end := start.Plus(vecUp).Plus(vecSide)
+				if grids.GetOrDefault(track, end, '#') == '#' {
 					continue
 				}
 
