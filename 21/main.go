@@ -49,15 +49,12 @@ func main() {
 		log.Fatalf("error while opening input file: %v", err)
 	}
 
-	scanner := bufio.NewScanner(file)
-	codes := make([]string, 0)
-	for scanner.Scan() {
-		codes = append(codes, scanner.Text())
-	}
-
 	part1 := 0
 	part2 := 0
-	for _, code := range codes {
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		code := scanner.Text()
 		p1, err := codeComplexity(code, part1Intermediates)
 		if err != nil {
 			log.Fatalf("error while finding part1: %v", err)
@@ -88,63 +85,73 @@ func codeComplexity(goal string, numIntermediate int) (int, error) {
 	return length * numeric, nil
 }
 
-// TODO: Some duplicate code between this method and below
-func numHumanPresses(goal string, numIntermediate int) (int, error) {
+// For each character of the input code, calls f with the sequence of button presses required to get there,
+// summing the values returned by that callback
+func sumAllRoutes(code string, keypad map[rune]grids.Location, avoid grids.Location, f func(string) (int, error)) (int, error) {
+	start, ok := keypad[startButton]
+	if !ok {
+		return 0, fmt.Errorf("did not find start location of button %c on keypad", startButton)
+	}
+
+	curr := start
 	total := 0
-	curr := numpad[startButton]
-	for _, c := range goal {
-		next, ok := numpad[c]
+	for _, c := range code {
+		next, ok := keypad[c]
 		if !ok {
-			return 0, fmt.Errorf("invalid character %c in code %s", c, goal)
+			return 0, fmt.Errorf("invalid character %c in code %s", c, code)
 		}
 
-		route := bestRoute(curr, next, numpadGap)
-		subTot, err := expandsInto(route, numIntermediate)
+		route := bestRoute(curr, next, avoid)
+		subtotal, err := f(route)
 		if err != nil {
 			return 0, err
 		}
 
-		total += subTot
+		total += subtotal
 		curr = next
+	}
+	return total, nil
+}
+
+// Total length of the sequence of button presses the human will be required to enter
+// on the numIntermediate-th robot such that the given goal is typed into the 0th robot
+func numHumanPresses(goal string, numIntermediate int) (int, error) {
+	// Convert goal into sequence of presses on the numpad, then pass that through the n robots
+	total, err := sumAllRoutes(goal, numpad, numpadGap, func(route string) (int, error) {
+		return expandsInto(route, numIntermediate)
+	})
+	if err != nil {
+		return 0, err
 	}
 
 	return total, nil
 }
 
+// Total number of button presses the given sequence expands into after being passed through n robots
 func expandsInto(seq string, numIterations int) (int, error) {
 	if numIterations == 0 {
 		// Base case: we're not going through another robot, so the sequence won't be expanded further
 		return len(seq), nil
 	}
 
+	// We'll see the same sequence at a layer many times, so cache intermediate results
 	key := expandsIntoCacheKey{seq, numIterations}
 	if cached, ok := expandsIntoCache[key]; ok {
 		return cached, nil
 	}
 
-	curr := dpadStart
-	total := 0
-	for _, c := range seq {
-		next, ok := dpad[c]
-		if !ok {
-			return 0, fmt.Errorf("unrecognized character in seq %c", c)
-		}
-		route := bestRoute(curr, next, dpadGap)
-
-		subTot, err := expandsInto(route, numIterations-1)
-		if err != nil {
-			return 0, err
-		}
-
-		total += subTot
-		curr = next
+	// Recursive case: sum what this sequence expands into at the next layer down
+	total, err := sumAllRoutes(seq, dpad, dpadGap, func(route string) (int, error) {
+		return expandsInto(route, numIterations-1)
+	})
+	if err != nil {
+		return 0, err
 	}
 
 	expandsIntoCache[key] = total
 	return total, nil
 }
 
-// We'll see the same sequence at a layer potentially many times, so a cache is useful
 type expandsIntoCacheKey struct {
 	seq           string
 	numIterations int
