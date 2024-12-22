@@ -41,8 +41,6 @@ var dpad = map[rune]grids.Location{
 var numpadGap = grids.Location{Row: 3, Col: 0}
 var dpadGap = grids.Location{Row: 0, Col: 0}
 
-var dpadStart = dpad[startButton]
-
 func main() {
 	file, err := os.Open("input.txt")
 	if err != nil {
