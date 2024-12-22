@@ -6,8 +6,14 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"runtime/pprof"
 	"strconv"
+	"strings"
+)
+
+const (
+	startButton        = 'A'
+	part1Intermediates = 2
+	part2Intermediates = 25
 )
 
 var numpad = map[rune]grids.Location{
@@ -35,24 +41,9 @@ var dpad = map[rune]grids.Location{
 var numpadGap = grids.Location{Row: 3, Col: 0}
 var dpadGap = grids.Location{Row: 0, Col: 0}
 
-const startButton = 'A'
-const part1Intermediates = 2
-const part2Intermediates = 20
+var dpadStart = dpad[startButton]
 
 func main() {
-	// Create CPU profile file
-	f, err := os.Create("cpu.prof")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
-	// Start CPU profiling
-	if err := pprof.StartCPUProfile(f); err != nil {
-		log.Fatal(err)
-	}
-	defer pprof.StopCPUProfile()
-
 	file, err := os.Open("input.txt")
 	if err != nil {
 		log.Fatalf("error while opening input file: %v", err)
@@ -66,10 +57,7 @@ func main() {
 
 	part1 := 0
 	part2 := 0
-	for i, code := range codes {
-		if i != 0 {
-			continue
-		}
+	for _, code := range codes {
 		p1, err := codeComplexity(code, part1Intermediates)
 		if err != nil {
 			log.Fatalf("error while finding part1: %v", err)
@@ -87,7 +75,7 @@ func main() {
 }
 
 func codeComplexity(goal string, numIntermediate int) (int, error) {
-	route, err := findHumanPresses(goal, numIntermediate)
+	length, err := numHumanPresses(goal, numIntermediate)
 	if err != nil {
 		return 0, err
 	}
@@ -97,70 +85,101 @@ func codeComplexity(goal string, numIntermediate int) (int, error) {
 		return 0, err
 	}
 
-	return len(route) * numeric, nil
+	return length * numeric, nil
 }
 
-func findHumanPresses(goal string, numIntermediate int) (string, error) {
-	route := make([]rune, 0, 2<<numIntermediate)
-	appendRune := func(r rune) {
-		route = append(route, r)
-	}
-
-	err := routeKeypad(numpad, numpadGap, goal, appendRune)
-	if err != nil {
-		return "", err
-	}
-
-	for i := range numIntermediate {
-		currentRoute := string(route)
-		fmt.Printf("%2d: %d\n", i, len(currentRoute))
-		route = route[:0] // clear but keep capacity
-		err = routeKeypad(dpad, dpadGap, currentRoute, appendRune)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	return string(route), nil
-}
-
-func routeKeypad(layout map[rune]grids.Location, avoid grids.Location, goal string, emit func(rune)) error {
-	loc := layout[startButton]
+// TODO: Some duplicate code between this method and below
+func numHumanPresses(goal string, numIntermediate int) (int, error) {
+	total := 0
+	curr := numpad[startButton]
 	for _, c := range goal {
-		nextLoc, ok := layout[c]
+		next, ok := numpad[c]
 		if !ok {
-			return fmt.Errorf("invalid character in numpad goal: %c", c)
+			return 0, fmt.Errorf("invalid character %c in code %s", c, goal)
 		}
-		emitRoute(loc, nextLoc, avoid, emit)
-		emit('A')
-		loc = nextLoc
+
+		route := bestRoute(curr, next, numpadGap)
+		subTot, err := expandsInto(route, numIntermediate)
+		if err != nil {
+			return 0, err
+		}
+
+		total += subTot
+		curr = next
 	}
 
-	return nil
+	return total, nil
 }
 
-func emitRoute(start, end grids.Location, avoid grids.Location, emit func(rune)) {
+func expandsInto(seq string, numIterations int) (int, error) {
+	if numIterations == 0 {
+		// Base case: we're not going through another robot, so the sequence won't be expanded further
+		return len(seq), nil
+	}
+
+	key := expandsIntoCacheKey{seq, numIterations}
+	if cached, ok := expandsIntoCache[key]; ok {
+		return cached, nil
+	}
+
+	curr := dpadStart
+	total := 0
+	for _, c := range seq {
+		next, ok := dpad[c]
+		if !ok {
+			return 0, fmt.Errorf("unrecognized character in seq %c", c)
+		}
+		route := bestRoute(curr, next, dpadGap)
+
+		subTot, err := expandsInto(route, numIterations-1)
+		if err != nil {
+			return 0, err
+		}
+
+		total += subTot
+		curr = next
+	}
+
+	expandsIntoCache[key] = total
+	return total, nil
+}
+
+// We'll see the same sequence at a layer potentially many times, so a cache is useful
+type expandsIntoCacheKey struct {
+	seq           string
+	numIterations int
+}
+
+var expandsIntoCache = make(map[expandsIntoCacheKey]int)
+
+func bestRoute(start, end, avoid grids.Location) string {
+	k := bestRouteCacheKey{start, end, avoid}
+	if cached, ok := bestRouteCache[k]; ok {
+		return cached
+	}
+
 	delta := end.Minus(start)
 	goesLeft := delta.Col < 0
+	var b strings.Builder
 
 	horizontal := func() {
 		for delta.Col < 0 {
-			emit('<')
+			b.WriteRune('<')
 			delta.Col++
 		}
 		for delta.Col > 0 {
-			emit('>')
+			b.WriteRune('>')
 			delta.Col--
 		}
 	}
 
 	vertical := func() {
 		for delta.Row < 0 {
-			emit('^')
+			b.WriteRune('^')
 			delta.Row++
 		}
 		for delta.Row > 0 {
-			emit('v')
+			b.WriteRune('v')
 			delta.Row--
 		}
 	}
@@ -172,9 +191,9 @@ func emitRoute(start, end grids.Location, avoid grids.Location, emit func(rune))
 		vertical()
 		horizontal()
 	} else if vertFirst == avoid || goesLeft {
-		// Prefer the horizontal first 2 cases:
+		// Prefer the horizontal first in 2 cases:
 		// 1. Going vertical-first hits a gap
-		// 2. We have to go left, and it's far away so we should prioritize
+		// 2. We have to go left
 		horizontal()
 		vertical()
 	} else {
@@ -182,4 +201,16 @@ func emitRoute(start, end grids.Location, avoid grids.Location, emit func(rune))
 		vertical()
 		horizontal()
 	}
+	b.WriteRune('A')
+
+	res := b.String()
+	bestRouteCache[k] = res
+	return res
 }
+
+// There are only so many valid inputs to `bestRoute`, cache results to avoid allocating a bunch of duplicate strings
+type bestRouteCacheKey struct {
+	start, end, avoid grids.Location
+}
+
+var bestRouteCache = make(map[bestRouteCacheKey]string)

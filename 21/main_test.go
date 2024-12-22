@@ -1,50 +1,29 @@
 package main
 
-import "testing"
-
-const goal = "029A"
-
-func Test0Intermediate(t *testing.T) {
-	want := "<A^A^^>AvvvA"
-
-	got, err := findHumanPresses(goal, 0)
-	if err != nil {
-		t.Fatalf("wanted nil error, but got: %v", err)
-	}
-
-	if want != got {
-		t.Fatalf("did not get expected route. \nwant: %s, \ngot:  %s", want, got)
-	}
-}
-
-func Test1Intermediate(t *testing.T) {
-	want := "v<<A>>^A<A>A<AAv>A^A<vAAA^>A"
-
-	got, err := findHumanPresses(goal, 1)
-	if err != nil {
-		t.Fatalf("wanted nil error, but got: %v", err)
-	}
-
-	if want != got {
-		t.Fatalf("did not get expected route. \nwant: %s, \ngot:  %s", want, got)
-	}
-}
+import (
+	"fmt"
+	"testing"
+)
 
 var tests = []struct {
-	goal string
-	want int
+	code            string
+	numIntermediate int
+	want            int
 }{
-	{"029A", 68 * 29},
-	{"980A", 60 * 980},
-	{"179A", 68 * 179},
-	{"456A", 64 * 456},
-	{"379A", 64 * 379},
+	{"029A", 0, len("<A^A>^^AvvvA")},
+	{"029A", 1, len("v<<A>>^A<A>AvA<^AA>A<vAAA>^A")},
+	{"029A", 2, len("<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A")},
+	{"980A", 2, len("<v<A>>^AAAvA^A<vA<AA>>^AvAA<^A>A<v<A>A>^AAAvA<^A>A<vA>^A<A>A")},
+	{"179A", 2, len("<v<A>>^A<vA<A>>^AAvAA<^A>A<v<A>>^AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A")},
+	{"456A", 2, len("<v<A>>^AA<vA<A>>^AAvAA<^A>A<vA>^A<A>A<vA>^A<A>A<v<A>A>^AAvA<^A>A")},
+	{"379A", 2, len("<v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A")},
 }
 
-func TestPart1Complexity(t *testing.T) {
+func TestNumHumanPresses(t *testing.T) {
 	for _, tc := range tests {
-		t.Run(tc.goal, func(t *testing.T) {
-			got, err := codeComplexity(tc.goal, 2)
+		name := fmt.Sprintf("%s, %d rounds", tc.code, tc.numIntermediate)
+		t.Run(name, func(t *testing.T) {
+			got, err := numHumanPresses(tc.code, tc.numIntermediate)
 			if err != nil {
 				t.Fatalf("wanted codeComplexity to return nil error, got: %v", err)
 			}
