@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"slices"
 	"sort"
 	"strings"
 )
@@ -99,8 +98,7 @@ func findPart1Triples(g Graph) map[triple]bool {
 }
 
 func maximallyGrowClique(g Graph, clique []string, candidates []string) []string {
-	bestLen := len(clique)
-	best := clique
+	bestSuffix := make([]string, 0)
 	originalLength := len(clique)
 
 	for i, candidate := range candidates {
@@ -110,9 +108,11 @@ func maximallyGrowClique(g Graph, clique []string, candidates []string) []string
 			// from now on. In go, this still points to the same underlying memory as `candidates`
 			newCandidates := candidates[i+1:]
 			clique = maximallyGrowClique(g, clique, newCandidates)
-			if len(clique) > bestLen {
-				best = slices.Clone(clique)
-				bestLen = len(best)
+			if len(clique) > len(bestSuffix)+originalLength {
+				bestSuffix = bestSuffix[:0]
+				for i := originalLength; i < len(clique); i++ {
+					bestSuffix = append(bestSuffix, clique[i])
+				}
 			}
 		}
 		clique = clique[:originalLength]
@@ -120,9 +120,7 @@ func maximallyGrowClique(g Graph, clique []string, candidates []string) []string
 
 	// Copy the best back to the original clique
 	clique = clique[:originalLength]
-	for i := originalLength; i < len(best); i++ {
-		clique = append(clique, best[i])
-	}
+	clique = append(clique, bestSuffix...)
 
 	return clique
 }
