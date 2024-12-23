@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"slices"
 	"sort"
 	"strings"
 )
@@ -68,7 +67,7 @@ func main() {
 		g.AddUndirectedEdge(n1, n2)
 	}
 
-	triples := findConnectedTriples(g)
+	triples := findPart1Triples(g)
 	part1 := len(triples)
 
 	maxClique := maximallyGrowClique(g, []string{}, g.AllNodes())
@@ -79,7 +78,7 @@ func main() {
 	fmt.Printf("Part 2: %s\n", part2)
 }
 
-func findConnectedTriples(g Graph) map[triple]bool {
+func findPart1Triples(g Graph) map[triple]bool {
 	triples := make(map[triple]bool)
 	for n1, neighbors := range g {
 		if !strings.HasPrefix(n1, "t") {
@@ -99,20 +98,21 @@ func findConnectedTriples(g Graph) map[triple]bool {
 }
 
 func maximallyGrowClique(g Graph, clique []string, candidates []string) []string {
-	bestLen := len(clique)
-	best := clique
+	bestSuffix := make([]string, 0)
 	originalLength := len(clique)
 
 	for i, candidate := range candidates {
 		if canAdd(g, candidate, clique) {
 			clique := append(clique, candidate)
-			// To avoid adding the same things in multiple orders, only consider adding nodes
-			// from i -> end from now on
+			// To avoid adding the same things in multiple orders, only consider adding nodes from i -> end
+			// from now on. In go, this still points to the same underlying memory as `candidates`
 			newCandidates := candidates[i+1:]
 			clique = maximallyGrowClique(g, clique, newCandidates)
-			if len(clique) > bestLen {
-				best = slices.Clone(clique)
-				bestLen = len(best)
+			if len(clique) > len(bestSuffix)+originalLength {
+				bestSuffix = bestSuffix[:0]
+				for i := originalLength; i < len(clique); i++ {
+					bestSuffix = append(bestSuffix, clique[i])
+				}
 			}
 		}
 		clique = clique[:originalLength]
@@ -120,9 +120,7 @@ func maximallyGrowClique(g Graph, clique []string, candidates []string) []string
 
 	// Copy the best back to the original clique
 	clique = clique[:originalLength]
-	for i := originalLength; i < len(best); i++ {
-		clique = append(clique, best[i])
-	}
+	clique = append(clique, bestSuffix...)
 
 	return clique
 }

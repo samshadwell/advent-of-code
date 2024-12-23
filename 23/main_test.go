@@ -51,7 +51,7 @@ func init() {
 	}
 }
 
-func TestFindConnectedTriples(t *testing.T) {
+func TestFindPart1Triples(t *testing.T) {
 	want := []triple{
 		{"co", "de", "ta"},
 		{"co", "ka", "ta"},
@@ -62,7 +62,7 @@ func TestFindConnectedTriples(t *testing.T) {
 		{"td", "wh", "yn"},
 	}
 
-	got := findConnectedTriples(graph)
+	got := findPart1Triples(graph)
 	if len(got) != len(want) {
 		t.Fatalf("got length did not match want length. len(got): %d, len(want): %d", len(got), len(want))
 	}
