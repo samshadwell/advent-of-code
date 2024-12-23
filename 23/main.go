@@ -68,7 +68,7 @@ func main() {
 		g.AddUndirectedEdge(n1, n2)
 	}
 
-	triples := findConnectedTriples(g)
+	triples := findPart1Triples(g)
 	part1 := len(triples)
 
 	maxClique := maximallyGrowClique(g, []string{}, g.AllNodes())
@@ -79,7 +79,7 @@ func main() {
 	fmt.Printf("Part 2: %s\n", part2)
 }
 
-func findConnectedTriples(g Graph) map[triple]bool {
+func findPart1Triples(g Graph) map[triple]bool {
 	triples := make(map[triple]bool)
 	for n1, neighbors := range g {
 		if !strings.HasPrefix(n1, "t") {
@@ -106,8 +106,8 @@ func maximallyGrowClique(g Graph, clique []string, candidates []string) []string
 	for i, candidate := range candidates {
 		if canAdd(g, candidate, clique) {
 			clique := append(clique, candidate)
-			// To avoid adding the same things in multiple orders, only consider adding nodes
-			// from i -> end from now on
+			// To avoid adding the same things in multiple orders, only consider adding nodes from i -> end
+			// from now on. In go, this still points to the same underlying memory as `candidates`
 			newCandidates := candidates[i+1:]
 			clique = maximallyGrowClique(g, clique, newCandidates)
 			if len(clique) > bestLen {
