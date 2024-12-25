@@ -14,13 +14,6 @@ import (
 )
 
 func main() {
-	// f, err := os.Create("cpu.pprof")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// pprof.StartCPUProfile(f)
-	// defer pprof.StopCPUProfile()
-
 	file, err := os.Open("input.txt")
 	if err != nil {
 		log.Fatalf("error while opening file: %v", err)
@@ -31,149 +24,76 @@ func main() {
 		log.Fatalf("error while parsing system: %v", err)
 	}
 
-	part1, err := system.ToDecimal('z')
+	part1 := system.Output()
 	if err != nil {
 		log.Fatalf("error while evaluating input system: %v", err)
 	}
 	fmt.Printf("Part 1: %d\n", part1)
 
-	badX, _ := system.ToDecimal('x')
-	badY, _ := system.ToDecimal('y')
-	maxX := system.MaxValue('x')
-	maxY := system.MaxValue('y')
+	// fmt.Println(system.DotGraph())
 
-	check := func() bool {
-		system.UpdateInput('x', badX)
-		system.UpdateInput('y', badY)
-		res, err := system.ToDecimal('z')
-		if err != nil || res != badX+badX {
-			return false
-		}
-
-		for range 100 {
-			x := rand.Intn(maxX + 1)
-			y := rand.Intn(maxY + 1)
-
-			system.UpdateInput('x', x)
-			system.UpdateInput('y', y)
-
-			res, err := system.ToDecimal('z')
-			if err != nil || res != x+y {
-				return false
-			}
-		}
-		return true
+	// This part was derived by hand. My methodology was to use the below `check` function
+	// to find where in the graph the first error is (where the error bits are no longer 0),
+	// then look at the dot-graph (commented-out above) to look and find the aberration
+	swaps := [][]string{
+		{"fkb", "z16"},
+		{"nnr", "rqf"},
+		{"z31", "rdn"},
+		{"z37", "rrn"},
 	}
-	acc := make([]string, 0, 4)
+	for _, s := range swaps {
+		system[s[0]], system[s[1]] = system[s[1]], system[s[0]]
+	}
 
-	swaps := findSwaps(system, check, 1, system.AllWires(), acc)
-	part2 := strings.Join(swaps, ",")
+	if !check(system) {
+		return
+	}
 
-	fmt.Printf("Part 2: %s", part2)
+	flatSwaps := make([]string, 0, 8)
+	for _, s := range swaps {
+		flatSwaps = append(flatSwaps, s...)
+	}
+	sort.Strings(flatSwaps)
+	part2 := strings.Join(flatSwaps, ",")
+	fmt.Printf("Part 2: %s\n", part2)
 }
 
 type LogicGate interface {
-	GetValue() (int, error)
+	GetValue() int
 }
 
 type Literal struct{ val int }
 type And struct {
 	in1, in2 string
 	sys      System
-	visiting bool
 }
 type Or struct {
 	in1, in2 string
 	sys      System
-	visiting bool
 }
 type Xor struct {
 	in1, in2 string
 	sys      System
-	visiting bool
 }
 
-func (l *Literal) GetValue() (int, error) { return l.val, nil }
-func (gate *And) GetValue() (int, error) {
-	if gate.visiting {
-		return 0, fmt.Errorf("cycle detected")
-	}
-	gate.visiting = true
-	defer func() { gate.visiting = false }()
-
-	v1, err := gate.sys[gate.in1].GetValue()
-	if err != nil {
-		return 0, err
-	}
-	v2, err := gate.sys[gate.in2].GetValue()
-	if err != nil {
-		return 0, err
-	}
-
-	return v1 & v2, nil
-}
-func (gate *Or) GetValue() (int, error) {
-	if gate.visiting {
-		return 0, fmt.Errorf("cycle detected")
-	}
-	gate.visiting = true
-	defer func() { gate.visiting = false }()
-
-	v1, err := gate.sys[gate.in1].GetValue()
-	if err != nil {
-		return 0, err
-	}
-	v2, err := gate.sys[gate.in2].GetValue()
-	if err != nil {
-		return 0, err
-	}
-
-	return v1 | v2, nil
-}
-func (gate *Xor) GetValue() (int, error) {
-	if gate.visiting {
-		return 0, fmt.Errorf("cycle detected")
-	}
-	gate.visiting = true
-	defer func() { gate.visiting = false }()
-
-	v1, err := gate.sys[gate.in1].GetValue()
-	if err != nil {
-		return 0, err
-	}
-	v2, err := gate.sys[gate.in2].GetValue()
-	if err != nil {
-		return 0, err
-	}
-
-	return v1 ^ v2, nil
-}
+func (l *Literal) GetValue() int { return l.val }
+func (gate *And) GetValue() int  { return gate.sys[gate.in1].GetValue() & gate.sys[gate.in2].GetValue() }
+func (gate *Or) GetValue() int   { return gate.sys[gate.in1].GetValue() | gate.sys[gate.in2].GetValue() }
+func (gate *Xor) GetValue() int  { return gate.sys[gate.in1].GetValue() ^ gate.sys[gate.in2].GetValue() }
 
 type System map[string]LogicGate
 
-func (s System) ToDecimal(prefix rune) (int, error) {
+func (s System) Output() int {
 	result := 0
 	for i := 0; ; i++ {
-		key := fmt.Sprintf("%c%02d", prefix, i)
+		key := fmt.Sprintf("z%02d", i)
 		gate, ok := s[key]
 		if !ok {
 			break
 		}
-		val, err := gate.GetValue()
-		if err != nil {
-			return 0, err
-		}
-		result += val << i
+		result += gate.GetValue() << i
 	}
-	return result, nil
-}
-
-func (s System) AllWires() []string {
-	res := make([]string, 0, len(s))
-	for k := range s {
-		res = append(res, k)
-	}
-	return res
+	return result
 }
 
 func (s System) NumBits(prefix rune) int {
@@ -240,11 +160,11 @@ func ParseSystem(r io.Reader) (System, error) {
 
 			switch match[2] {
 			case "AND":
-				sys[match[4]] = &And{match[1], match[3], sys, false}
+				sys[match[4]] = &And{match[1], match[3], sys}
 			case "OR":
-				sys[match[4]] = &Or{match[1], match[3], sys, false}
+				sys[match[4]] = &Or{match[1], match[3], sys}
 			case "XOR":
-				sys[match[4]] = &Xor{match[1], match[3], sys, false}
+				sys[match[4]] = &Xor{match[1], match[3], sys}
 			default:
 				return nil, fmt.Errorf("unrecognized gate type %s", match[2])
 			}
@@ -254,39 +174,72 @@ func ParseSystem(r io.Reader) (System, error) {
 	return sys, nil
 }
 
-func findSwaps(sys System, check func() bool, numSwaps int, candidates []string, soFar []string) []string {
-	if numSwaps == 0 {
-		if check() {
-			sort.Strings(soFar)
-			return soFar
-		} else {
-			return nil
+func (sys System) DotGraph() string {
+	var sb strings.Builder
+	sb.WriteString("digraph {\n")
+	for id, gate := range sys {
+		switch v := gate.(type) {
+		case *Literal:
+			var t string
+			switch id[0] {
+			case 'x', 'y':
+				t = "input"
+			case 'z':
+				t = "output"
+			default:
+				t = "unknown"
+			}
+
+			sb.WriteString(fmt.Sprintf("%s [label=\"%s\n%s\"];\n", id, id, t))
+		case *And:
+			sb.WriteString(fmt.Sprintf("%s [label=\"%s\nAND\"];\n", id, id))
+			sb.WriteString(fmt.Sprintf("%s -> %s;\n", v.in1, id))
+			sb.WriteString(fmt.Sprintf("%s -> %s;\n", v.in2, id))
+		case *Or:
+			sb.WriteString(fmt.Sprintf("%s [label=\"%s\nOR\"];\n", id, id))
+			sb.WriteString(fmt.Sprintf("%s -> %s;\n", v.in1, id))
+			sb.WriteString(fmt.Sprintf("%s -> %s;\n", v.in2, id))
+		case *Xor:
+			sb.WriteString(fmt.Sprintf("%s [label=\"%s\nXOR\"];\n", id, id))
+			sb.WriteString(fmt.Sprintf("%s -> %s;\n", v.in1, id))
+			sb.WriteString(fmt.Sprintf("%s -> %s;\n", v.in2, id))
+		}
+	}
+	sb.WriteRune('}')
+
+	return sb.String()
+}
+
+func check(system System) bool {
+	maxX := system.MaxValue('x')
+	maxY := system.MaxValue('y')
+	diffs := make(map[int]int)
+	for range 1_000 {
+		x := rand.Intn(maxX + 1)
+		y := rand.Intn(maxY + 1)
+
+		system.UpdateInput('x', x)
+		system.UpdateInput('y', y)
+
+		got := system.Output()
+		want := x + y
+
+		diffBits := got ^ want
+		for i := 0; diffBits != 0; i++ {
+			d := diffBits & 1
+			if d == 1 {
+				diffs[i]++
+			}
+			diffBits = diffBits >> 1
 		}
 	}
 
-	for i, s1 := range candidates {
-		if s1[0] == 'x' || s1[0] == 'y' {
-			continue
-		}
-
-		for _, s2 := range candidates[i+1:] {
-			if s2[0] == 'x' || s2[0] == 'y' {
-				continue
-			}
-
-			soFar = append(soFar, s1, s2)
-			sys[s1], sys[s2] = sys[s2], sys[s1]
-
-			res := findSwaps(sys, check, numSwaps-1, candidates[i+1:], soFar)
-			if res != nil {
-				return res
-			}
-
-			// Undo the swap
-			sys[s1], sys[s2] = sys[s2], sys[s1]
-			soFar = soFar[:len(soFar)-2]
+	for i := range system.NumBits('z') {
+		if diffs[i] != 0 {
+			fmt.Printf("Not yet, look around output bit %d\n", i)
+			return false
 		}
 	}
 
-	return nil
+	return true
 }

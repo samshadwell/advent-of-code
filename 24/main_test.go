@@ -83,70 +83,10 @@ func TestResult(t *testing.T) {
 			if err != nil {
 				t.Fatalf("wanted no error from parseSystem, got: %v", err)
 			}
-			got, err := sys.ToDecimal('z')
-			if err != nil {
-				t.Fatalf("wanted no error from ToDecimal, got: %v", err)
-			}
-
+			got := sys.Output()
 			if tc.want != got {
 				t.Fatalf("Result did not match expected. want: %d, got: %d", tc.want, got)
 			}
 		})
-	}
-}
-
-func TestSwapGates(t *testing.T) {
-	input := `x00: 0
-x01: 1
-x02: 0
-x03: 1
-x04: 0
-x05: 1
-y00: 0
-y01: 0
-y02: 1
-y03: 1
-y04: 0
-y05: 1
-
-x00 AND y00 -> z05
-x01 AND y01 -> z02
-x02 AND y02 -> z01
-x03 AND y03 -> z03
-x04 AND y04 -> z04
-x05 AND y05 -> z00
-`
-	sys, err := ParseSystem(strings.NewReader(input))
-	if err != nil {
-		t.Fatalf("wanted nil error, got: %v", err)
-	}
-
-	check := func() bool {
-		for x := 0; x <= sys.MaxValue('x'); x++ {
-			for y := 0; y <= sys.MaxValue('y'); y++ {
-				sys.UpdateInput('x', x)
-				sys.UpdateInput('y', y)
-
-				res, err := sys.ToDecimal('z')
-				if err != nil || res != x&y {
-					return false
-				}
-			}
-		}
-		return true
-	}
-	candidates := sys.AllWires()
-	swaps := make([]string, 0, 4)
-
-	swaps = findSwaps(sys, check, 2, candidates, swaps)
-	if swaps == nil {
-		t.Fatal("wanted non-nil swaps, got nil")
-	}
-
-	want := "z00,z01,z02,z05"
-	got := strings.Join(swaps, ",")
-
-	if want != got {
-		t.Fatalf("want != got, want: %s, got: %s", want, got)
 	}
 }
