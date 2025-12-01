@@ -1,0 +1,42 @@
+name: CI
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  ci-2024:
+    name: CI for 2024
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.23.x"
+      - name: Build
+        run: go build -C 2024/ -v ./...
+      - name: Test
+        run: go test -C 2024/ -v ./...
+  ci-2025:
+    env:
+      CARGO_TERM_COLOR: always
+      RUSTFLAGS: "-Dwarnings"
+    name: CI for 2025
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "2025"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Formatting check
+        run: cargo fmt -- --check
+      - name: Clippy lint
+        run: cargo clippy
+      - name: Build
+        run: cargo build
+      - name: Test
+        run: cargo test

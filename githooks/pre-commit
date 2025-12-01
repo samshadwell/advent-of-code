@@ -1,5 +1,2 @@
 #!/bin/bash
 set -e
-
-golangci-lint run ./...
-go mod tidy && git add go.mod go.sum
