@@ -46,6 +46,8 @@ fn part2<R: BufRead>(reader: R) -> Result<usize> {
         let delta = parse(&line)?;
         let before_mod = current + delta;
         let incr = match before_mod {
+            // For negative position ends: If we started on 0 and went left, we _did not_ necessarily pass 0
+            // In all other cases, we started positive and ended negative, implying passing zero at least once
             ..0 => (if current == 0 { 0 } else { 1 }) + (-before_mod / 100) as usize,
             0 => 1,
             1.. => (before_mod / 100) as usize,
