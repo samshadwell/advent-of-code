@@ -1,0 +1,45 @@
+name: CI
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  ci-2024:
+    name: CI for 2024
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.23.x"
+      - name: Lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          working-directory: "2024"
+          version: latest
+      - name: Build
+        run: go build -C 2024/ -v ./...
+      - name: Test
+        run: go test -C 2024/ -v ./...
+  ci-2025:
+    env:
+      CARGO_TERM_COLOR: always
+    name: CI for 2025
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: cd 2025
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          working-directory: "2025"
+      - name: Formatting check
+        run: cargo fmt -- --check
+        working-directory: "2025"
+      - name: Build
+        run: cargo build --verbose
+        working-directory: "2025"
+      - name: Test
+        run: cargo test --verbose
+        working-directory: "2025"
