@@ -23,18 +23,19 @@ jobs:
       CARGO_TERM_COLOR: always
     name: CI for 2025
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "2025"
     steps:
       - uses: actions/checkout@v6
-      - run: cd 2025
       - uses: dtolnay/rust-toolchain@stable
         with:
-          working-directory: "2025"
+          components: rustfmt, clippy
       - name: Formatting check
         run: cargo fmt -- --check
-        working-directory: "2025"
+      - name: Clippy lint
+        run: cargo clippy
       - name: Build
         run: cargo build
-        working-directory: "2025"
       - name: Test
         run: cargo test
-        working-directory: "2025"
