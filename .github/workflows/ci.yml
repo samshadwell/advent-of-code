@@ -38,8 +38,8 @@ jobs:
         run: cargo fmt -- --check
         working-directory: "2025"
       - name: Build
-        run: cargo build --verbose
+        run: cargo build
         working-directory: "2025"
       - name: Test
-        run: cargo test --verbose
+        run: cargo test
         working-directory: "2025"
