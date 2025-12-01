@@ -19,7 +19,7 @@ fn main() -> Result<()> {
 
     fn part1<R: BufRead>(reader: R) -> Result<usize> {
         // TODO: Solve Part 1 of the puzzle
-        let answer = reader.lines().flatten().count();
+        let answer = reader.lines().map_while(Result::ok).count();
         Ok(answer)
     }
 

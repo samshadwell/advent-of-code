@@ -8,7 +8,7 @@ const DAY: &str = "01";
 const INPUT_FILE: &str = concatcp!("input/", DAY, ".txt");
 
 fn parse(line: &str) -> Result<i32> {
-    let dir = line.chars().nth(0);
+    let dir = line.chars().next();
     let sign = match dir {
         Some('L') => -1,
         Some('R') => 1,
@@ -23,7 +23,7 @@ fn part1<R: BufRead>(reader: R) -> Result<usize> {
     let mut current = 50;
     for res in reader.lines() {
         let line = res?;
-        if line.len() == 0 {
+        if line.is_empty() {
             continue;
         }
         let delta = parse(&line)?;
@@ -40,7 +40,7 @@ fn part2<R: BufRead>(reader: R) -> Result<usize> {
     let mut current = 50;
     for res in reader.lines() {
         let line = res?;
-        if line.len() == 0 {
+        if line.is_empty() {
             continue;
         }
         let delta = parse(&line)?;
