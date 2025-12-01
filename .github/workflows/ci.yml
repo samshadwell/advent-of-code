@@ -21,6 +21,7 @@ jobs:
   ci-2025:
     env:
       CARGO_TERM_COLOR: always
+      RUSTFLAGS: "-Dwarnings"
     name: CI for 2025
     runs-on: ubuntu-latest
     defaults:
