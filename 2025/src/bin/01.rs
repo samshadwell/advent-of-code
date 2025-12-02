@@ -1,5 +1,5 @@
-use adv_code_2025::*;
-use anyhow::*;
+use adv_code_2025::start_day;
+use anyhow::{Result, anyhow};
 use const_format::concatcp;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
