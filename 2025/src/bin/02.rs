@@ -3,6 +3,7 @@ use anyhow::*;
 use const_format::concatcp;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::usize;
 
 const DAY: &str = "02";
 const INPUT_FILE: &str = concatcp!("input/", DAY, ".txt");
@@ -43,99 +44,52 @@ fn parse_ranges<R: BufRead>(reader: R) -> Result<Vec<(u64, u64)>> {
     Ok(result)
 }
 
-struct MagicValueIter {
-    start: u64,
-    end: u64,
-    // Invariant: This always points to the next, unreturned, base value at which to start
-    // searching for our next magic value. E.g., if 12 then we'd first try number 1212, then
-    // 1313, then 1414, and so on, returning only when we find a number between start and end.
-    next_base: Option<u64>,
-}
-
-impl MagicValueIter {
-    fn new(start: u64, end: u64) -> Self {
-        let start_str = start.to_string();
-        let first_half = &start_str[..(start_str.len() / 2)];
-        let next_base = if first_half.is_empty() {
-            Some(1)
-        } else {
-            Some(
-                first_half
-                    .parse()
-                    .expect("parse should succeed by construction"),
-            )
+// true if the number consists of a sequence of digits which repeats twice when expressed
+// as base-10. E.g., 11, 123123, or 4444 would all return true
+fn is_repeating_number(num: u64, max_repeats: usize) -> bool {
+    let s = num.to_string();
+    let bytes = s.as_bytes();
+    'outer: for repeats in 2..=max_repeats {
+        if repeats > bytes.len() {
+            break;
+        }
+        if bytes.len() % repeats != 0 {
+            continue;
         };
-        MagicValueIter {
-            start,
-            end,
-            next_base,
-        }
-    }
 
-    // Check on what the next value would be, ignoring any bounds
-    fn peek_candidate_unchecked(&self) -> Option<u64> {
-        match self.next_base {
-            None => None,
-            Some(nb) => {
-                let s = format!("{}{}", nb, nb);
-                Some(s.parse().expect("parse should succeed by construction"))
+        let subseq_len = bytes.len() / repeats;
+        for i in subseq_len..bytes.len() {
+            if bytes[i] != bytes[i % subseq_len] {
+                continue 'outer;
             }
         }
+        return true;
     }
-
-    fn increment_candidate(&mut self) {
-        match self.next_base {
-            None => {}
-            Some(nb) => {
-                self.next_base = Some(nb + 1);
-            }
-        }
-    }
-}
-
-impl Iterator for MagicValueIter {
-    type Item = u64;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let maybe_candidate = self.peek_candidate_unchecked();
-        if maybe_candidate.is_none() {
-            return None;
-        }
-
-        loop {
-            let candidate = self.peek_candidate_unchecked().unwrap();
-            if candidate < self.start {
-                // Candidate is too small, increment base, continue loop
-                self.increment_candidate();
-            } else if candidate >= self.start && candidate <= self.end {
-                // Candidate is within range, will be returned outside loop
-                break;
-            } else {
-                // Candidate is too large, there are no valid values
-                self.next_base = None;
-                break;
-            }
-        }
-
-        let val = self.peek_candidate_unchecked();
-        self.increment_candidate();
-        val
-    }
+    false
 }
 
 fn part1<R: BufRead>(reader: R) -> Result<u64> {
     let mut result: u64 = 0;
     for (start, end) in parse_ranges(reader)? {
-        for magic_value in MagicValueIter::new(start, end) {
-            result += magic_value as u64;
+        for v in start..=end {
+            if is_repeating_number(v, 2) {
+                result += v;
+            }
         }
     }
     Ok(result)
 }
 
-// TODO: Change result type and implement
-fn part2<R: BufRead>(_reader: R) -> Result<u32> {
-    Ok(0)
+fn part2<R: BufRead>(reader: R) -> Result<u64> {
+    let mut result: u64 = 0;
+    for (start, end) in parse_ranges(reader)? {
+        for v in start..=end {
+            if is_repeating_number(v, usize::MAX) {
+                result += v;
+            }
+        }
+    }
+    Ok(result)
 }
 
 fn main() -> Result<()> {
@@ -177,8 +131,7 @@ mod tests {
 
     #[test]
     fn part_2() {
-        // TODO: Modify expected
-        let expected = 0;
+        let expected = 4174379265;
         let result = part2(BufReader::new(TEST.as_bytes()));
         assert_eq!(result.unwrap(), expected)
     }
