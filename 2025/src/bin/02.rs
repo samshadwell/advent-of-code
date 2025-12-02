@@ -14,22 +14,22 @@ fn parse_ranges<R: BufRead>(reader: R) -> Result<Vec<(u64, u64)>> {
             .copied()
             .filter(|&byte| byte == b'-' || byte.is_ascii_digit())
             .collect();
+
         let mut parts = range.split(|&byte| byte == b'-');
-        let start_str = std::str::from_utf8(
-            parts
-                .next()
-                .expect("range should contain exactly two parts, found zero"),
-        )?;
-        let end_str = std::str::from_utf8(
-            parts
-                .next()
-                .expect("range should contain exactly two parts, found one"),
-        )?;
+        let start_bytes = parts
+            .next()
+            .ok_or_else(|| anyhow!("range should contain exactly two parts, found zero"))?;
+        let end_bytes = parts
+            .next()
+            .ok_or_else(|| anyhow!("range should contain exactly two parts, found one"))?;
         if parts.next().is_some() {
             return Err(anyhow!(
                 "range should contain exactly two parts, found at least three"
             ));
         }
+
+        let start_str = std::str::from_utf8(start_bytes)?;
+        let end_str = std::str::from_utf8(end_bytes)?;
 
         let start = start_str
             .parse()
