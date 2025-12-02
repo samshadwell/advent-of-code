@@ -1,5 +1,5 @@
 use adv_code_2025::start_day;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use const_format::concatcp;
 use std::io::{BufRead, BufReader};
 
