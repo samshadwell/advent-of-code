@@ -1,7 +1,6 @@
 use adv_code_2025::*;
 use anyhow::*;
 use const_format::concatcp;
-use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 const DAY: &str = "02";
@@ -71,43 +70,38 @@ fn is_repeating_number(num: u64, max_repeats: usize) -> bool {
     false
 }
 
+fn solve<R: BufRead>(reader: R, max_repeats: usize) -> Result<u64> {
+    let ranges = parse_ranges(reader)?;
+    let sum = ranges
+        .into_iter()
+        .flat_map(|(start, end)| start..=end)
+        .filter(|&v| is_repeating_number(v, max_repeats))
+        .sum();
+    Ok(sum)
+}
+
 fn part1<R: BufRead>(reader: R) -> Result<u64> {
-    let mut result: u64 = 0;
-    for (start, end) in parse_ranges(reader)? {
-        for v in start..=end {
-            if is_repeating_number(v, 2) {
-                result += v;
-            }
-        }
-    }
-    Ok(result)
+    solve(reader, 2)
 }
 
 fn part2<R: BufRead>(reader: R) -> Result<u64> {
-    let mut result: u64 = 0;
-    for (start, end) in parse_ranges(reader)? {
-        for v in start..=end {
-            if is_repeating_number(v, usize::MAX) {
-                result += v;
-            }
-        }
-    }
-    Ok(result)
+    solve(reader, usize::MAX)
 }
 
 fn main() -> Result<()> {
+    let input = std::fs::read(INPUT_FILE)?;
     start_day(DAY);
 
     //region Part 1
     println!("=== Part 1 ===");
-    let input_file = BufReader::new(File::open(INPUT_FILE)?);
+    let input_file = BufReader::new(input.as_slice());
     let result = part1(input_file)?;
     println!("Result = {}", result);
     //endregion
 
     //region Part 2
     println!("\n=== Part 2 ===");
-    let input_file = BufReader::new(File::open(INPUT_FILE)?);
+    let input_file = BufReader::new(input.as_slice());
     let result = part2(input_file)?;
     println!("Result = {}", result);
     //endregion
