@@ -43,8 +43,12 @@ fn parse_ranges<R: BufRead>(reader: R) -> Result<Vec<(u64, u64)>> {
     Ok(result)
 }
 
-// true if the number consists of a sequence of digits which repeats twice when expressed
-// as base-10. E.g., 11, 123123, or 4444 would all return true
+// true if the number consists of a sequence of digits which repeats at least twice and at most max_repeats times
+// when expressed as base-10. E.g.:
+// - 11 is '1' repeated twice
+// - 123123 is '123' repeated twice
+// - 4444 is both '44' repeated twice '4' repeated four times
+// - 123123123 is '123' repeated three times
 fn is_repeating_number(num: u64, max_repeats: usize) -> bool {
     let s = num.to_string();
     let bytes = s.as_bytes();
