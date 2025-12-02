@@ -3,7 +3,6 @@ use anyhow::*;
 use const_format::concatcp;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::usize;
 
 const DAY: &str = "02";
 const INPUT_FILE: &str = concatcp!("input/", DAY, ".txt");
@@ -53,7 +52,7 @@ fn is_repeating_number(num: u64, max_repeats: usize) -> bool {
         if repeats > bytes.len() {
             break;
         }
-        if bytes.len() % repeats != 0 {
+        if !bytes.len().is_multiple_of(repeats) {
             continue;
         };
 
