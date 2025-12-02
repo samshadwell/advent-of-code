@@ -1,7 +1,6 @@
 use adv_code_2025::*;
 use anyhow::*;
 use const_format::concatcp;
-use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 const DAY: &str = "NN"; // TODO: Fill the day
@@ -18,18 +17,19 @@ fn part2<R: BufRead>(_reader: R) -> Result<i32> {
 }
 
 fn main() -> Result<()> {
+    let input = std::fs::read(INPUT_FILE)?;
     start_day(DAY);
 
     //region Part 1
     println!("=== Part 1 ===");
-    let input_file = BufReader::new(File::open(INPUT_FILE)?);
+    let input_file = BufReader::new(input.as_slice());
     let result = part1(input_file)?;
     println!("Result = {}", result);
     //endregion
 
     //region Part 2
     println!("\n=== Part 2 ===");
-    let input_file = BufReader::new(File::open(INPUT_FILE)?);
+    let input_file = BufReader::new(input.as_slice());
     let result = part2(input_file)?;
     println!("Result = {}", result);
     //endregion
