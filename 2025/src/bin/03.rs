@@ -7,13 +7,6 @@ use std::time::Instant;
 const DAY: &str = "03";
 const INPUT_FILE: &str = concatcp!("input/", DAY, ".txt");
 
-fn convert_ascii_digit(c: u8) -> Result<u128> {
-    if !c.is_ascii_digit() {
-        return Err(anyhow!("non-digit byte given: {}", c));
-    }
-    Ok(c as u128 - '0' as u128)
-}
-
 fn max_joltage(bank: &str, num_digits: usize) -> Result<u128> {
     if !bank.chars().all(|c| c.is_ascii_digit()) {
         return Err(anyhow!("expected digit-only string, got: {}", bank));
@@ -32,57 +25,38 @@ fn max_joltage(bank: &str, num_digits: usize) -> Result<u128> {
     }
 
     let bytes = bank.as_bytes();
-    let mut digits: Vec<Option<u8>> = vec![None; num_digits];
+    let mut digits = Vec::with_capacity(num_digits);
+    let mut start_idx = 0;
 
-    'outer: for idx in 0..bytes.len() {
-        let b = bytes[idx];
-        'inner: for d_idx in 0..num_digits {
-            // Can only "take" a digit if we have enough to fill in the rest of its digits
-            let last_idx_for_digit = bytes.len() - (num_digits - d_idx);
-            if idx > last_idx_for_digit {
-                continue 'inner;
-            }
+    for i in 0..num_digits {
+        let remaining_to_find = num_digits - i;
+        let end_idx = bytes.len() - remaining_to_find;
 
-            match digits[d_idx] {
-                // We have no current value for this digit, anything is better
-                None => {
-                    digits[d_idx] = Some(b);
-                    continue 'outer;
-                }
-                // Have a current value and this one is better, take it
-                Some(curr) if curr < b => {
-                    for d in digits.iter_mut().skip(d_idx) {
-                        *d = None
-                    }
-                    digits[d_idx] = Some(b);
-                    continue 'outer;
-                }
-                // Our current value is equal or better, consider for the next digit
-                Some(_) => {
-                    continue 'inner;
-                }
-            }
-        }
+        let (max_offset, max_digit) = bytes[start_idx..=end_idx]
+            .iter()
+            .enumerate()
+            // using negated min_by_key to get the _first_ largest digit (max_by_key would return last)
+            .min_by_key(|&(_, d)| -(*d as i32))
+            .unwrap();
+
+        digits.push(*max_digit);
+        start_idx += max_offset + 1;
     }
 
-    if !digits.iter().all(|o| o.is_some()) {
-        unreachable!("programmer error: all digits should have values")
+    if digits.len() != num_digits {
+        unreachable!(
+            "programmer error, should get exactly num_digits digits, got {}",
+            digits.len()
+        )
     }
 
-    let mut result = 0;
-    for (i, d) in digits.iter().enumerate() {
-        let contrib =
-            10_u128.pow((num_digits - i - 1) as u32) * convert_ascii_digit(d.unwrap()).unwrap();
-        result += contrib;
-    }
-    Ok(result)
+    Ok(digits
+        .iter()
+        .fold(0, |acc, &d| acc * 10 + (d - b'0') as u128))
 }
 
 fn solve<R: BufRead>(reader: R, num_digits: usize) -> Result<u128> {
-    Ok(reader
-        .lines()
-        .flat_map(|l| max_joltage(&l?, num_digits))
-        .sum())
+    reader.lines().map(|l| max_joltage(&l?, num_digits)).sum()
 }
 
 fn part1<R: BufRead>(reader: R) -> Result<u128> {
