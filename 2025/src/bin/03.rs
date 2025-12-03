@@ -71,7 +71,6 @@ fn main() -> Result<()> {
     let input = std::fs::read(INPUT_FILE)?;
     start_day(DAY);
 
-    //region Part 1
     println!("=== Part 1 ===");
     let p1_time = Instant::now();
     let input_file = BufReader::new(input.as_slice());
@@ -79,9 +78,7 @@ fn main() -> Result<()> {
     let p1_elapsed = p1_time.elapsed();
     println!("Result = {}", result);
     println!("Elapsed = {:.2?}", p1_elapsed);
-    //endregion
 
-    //region Part 2
     println!("\n=== Part 2 ===");
     let p2_time = Instant::now();
     let input_file = BufReader::new(input.as_slice());
@@ -89,7 +86,6 @@ fn main() -> Result<()> {
     let p2_elapsed = p2_time.elapsed();
     println!("Result = {}", result);
     println!("Elapsed = {:.2?}", p2_elapsed);
-    //endregion
 
     Ok(())
 }
