@@ -11,7 +11,11 @@ const INPUT_FILE: &str = concatcp!("input/", DAY, ".txt");
 fn parse_grid<R: BufRead>(reader: R) -> Result<Grid<char>> {
     let vec: Result<Vec<Vec<char>>> = reader
         .lines()
-        .map(|line| Ok(line?.chars().collect()))
+        .map(|line| {
+            line.map(|s| s.chars().collect())
+                // Convert errors to the anyhow variety
+                .map_err(anyhow::Error::from)
+        })
         .collect();
 
     Ok(Grid::new(vec?))
