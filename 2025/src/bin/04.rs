@@ -54,8 +54,7 @@ fn part2<R: BufRead>(reader: R) -> Result<usize> {
         });
 
     let mut num_removed = 0;
-    while !stack.is_empty() {
-        let to_process = stack.pop().unwrap();
+    while let Some(to_process) = stack.pop() {
         if let Some('@') = grid.get(&to_process)
             && count_adjacent_rolls(&grid, &to_process) < 4
         {

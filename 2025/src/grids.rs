@@ -62,15 +62,11 @@ impl<T> Grid<T> {
     }
 
     pub fn get(&self, p: &Position) -> Option<&T> {
-        self.0.get(p.row).map(|row| row.get(p.col)).flatten()
+        self.0.get(p.row).and_then(|row| row.get(p.col))
     }
 
     pub fn set(&mut self, p: &Position, val: T) -> Result<()> {
-        let cell = self
-            .0
-            .get_mut(p.row)
-            .map(|row| row.get_mut(p.col))
-            .flatten();
+        let cell = self.0.get_mut(p.row).and_then(|row| row.get_mut(p.col));
 
         match cell {
             None => Err(anyhow!("invalid position given to set")),
@@ -107,11 +103,11 @@ impl<'a, T> Iterator for PositionsIter<'a, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.curr_row >= self.grid.0.len() {
-            return None;
+            None
         } else if self.curr_col >= self.grid.0.get(self.curr_row).unwrap().len() {
             self.curr_col = 0;
             self.curr_row += 1;
-            return self.next();
+            self.next()
         } else {
             let result = Some(Position::new(self.curr_row, self.curr_col));
             self.curr_col += 1;
