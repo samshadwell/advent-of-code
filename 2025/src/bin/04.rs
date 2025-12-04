@@ -42,16 +42,15 @@ fn part1<R: BufRead>(reader: R) -> Result<usize> {
 fn part2<R: BufRead>(reader: R) -> Result<usize> {
     let mut grid = parse_grid(reader)?;
 
-    let mut stack = Vec::new();
-    grid.all_positions()
+    let mut stack: Vec<_> = grid
+        .all_positions()
         .map(|pos| (grid.get(&pos), pos))
-        .for_each(|(val, pos)| match val {
+        .filter_map(|(val, pos)| match val {
             None => unreachable!("all_positions should only return valid positions"),
-            Some('@') if count_adjacent_rolls(&grid, &pos) < 4 => {
-                stack.push(pos);
-            }
-            _ => {}
-        });
+            Some('@') if count_adjacent_rolls(&grid, &pos) < 4 => Some(pos),
+            _ => None,
+        })
+        .collect();
 
     let mut num_removed = 0;
     while let Some(to_process) = stack.pop() {

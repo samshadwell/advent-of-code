@@ -6,6 +6,13 @@ pub struct Position {
     col: usize,
 }
 
+#[derive(Debug)]
+pub struct AdjacentIter<'a> {
+    base: &'a Position,
+    row_offset: i32,
+    col_offset: i32,
+}
+
 impl Position {
     pub fn new(row: usize, col: usize) -> Self {
         Position { row, col }
@@ -30,26 +37,26 @@ impl<'a> Iterator for AdjacentIter<'a> {
     type Item = Position;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.col_offset += 1;
-        if self.col_offset > 1 {
-            self.col_offset = -1;
-            self.row_offset += 1
-        }
+        loop {
+            self.col_offset += 1;
+            if self.col_offset > 1 {
+                self.col_offset = -1;
+                self.row_offset += 1
+            }
 
-        if self.row_offset > 1 {
-            return None;
-        } else if self.col_offset == 0 && self.row_offset == 0 {
-            // Skip the input coordinate itself
-            return self.next();
-        }
+            if self.row_offset > 1 {
+                return None;
+            } else if self.col_offset == 0 && self.row_offset == 0 {
+                // Skip the input coordinate itself
+                continue;
+            }
 
-        let new_col = (self.base.col as i32) + self.col_offset;
-        let new_row = (self.base.row as i32) + self.row_offset;
+            let new_col = (self.base.col as i32) + self.col_offset;
+            let new_row = (self.base.row as i32) + self.row_offset;
 
-        if new_col < 0 || new_row < 0 {
-            self.next()
-        } else {
-            Some(Position::new(new_row as usize, new_col as usize))
+            if new_col >= 0 && new_row >= 0 {
+                return Some(Position::new(new_row as usize, new_col as usize));
+            }
         }
     }
 }
@@ -102,25 +109,20 @@ impl<'a, T> Iterator for PositionsIter<'a, T> {
     type Item = Position;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.curr_row >= self.grid.0.len() {
-            None
-        } else if self.curr_col >= self.grid.0.get(self.curr_row).unwrap().len() {
-            self.curr_col = 0;
-            self.curr_row += 1;
-            self.next()
-        } else {
+        loop {
+            let row = self.grid.0.get(self.curr_row)?;
+
+            if self.curr_col >= row.len() {
+                self.curr_col = 0;
+                self.curr_row += 1;
+                continue;
+            }
+
             let result = Some(Position::new(self.curr_row, self.curr_col));
             self.curr_col += 1;
-            result
+            return result;
         }
     }
-}
-
-#[derive(Debug)]
-pub struct AdjacentIter<'a> {
-    base: &'a Position,
-    row_offset: i32,
-    col_offset: i32,
 }
 
 #[cfg(test)]
