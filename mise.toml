@@ -5,5 +5,5 @@ go = "latest"
 golangci-lint = "2.7.1" # Freeze since I'm not actively developing go
 rust = { version = "stable", profile = "default" }
 
-[tasks.test-all]
-depends = ["//2024:test", "//2025:test"]
+[tasks.check-all]
+depends = ["//2024:check", "//2025:check"]

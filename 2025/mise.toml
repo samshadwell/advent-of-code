@@ -8,5 +8,8 @@ run = 'cargo clippy'
 run = 'cargo build'
 
 [tasks.test]
-depends = [':format-check', ':lint', ':build']
+depends = [':build']
 run = 'cargo test'
+
+[tasks.check]
+depends = [':format-check', ':lint', ':test']
