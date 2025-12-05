@@ -6,8 +6,8 @@ on:
     branches: ["main"]
 
 jobs:
-  test:
-    name: "2024 Lint/Build/Test"
+  check-2024:
+    name: "mise //2024:check"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -15,4 +15,14 @@ jobs:
         with:
           experimental: true
       - name: Run all tests
-        run: mise '//:check-all'
+        run: mise '//2024:check'
+  check-2025:
+    name: "mise //2025:check"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v3
+        with:
+          experimental: true
+      - name: Run all tests
+        run: mise '//2025:check'
