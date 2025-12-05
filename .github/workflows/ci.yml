@@ -7,22 +7,20 @@ on:
 
 jobs:
   check-2024:
-    name: "mise //2024:check"
+    name: "//2024:check"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
         with:
           experimental: true
-      - name: Run all tests
-        run: mise '//2024:check'
+      - run: mise '//2024:check'
   check-2025:
-    name: "mise //2025:check"
+    name: "//2025:check"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
         with:
           experimental: true
-      - name: Run all tests
-        run: mise '//2025:check'
+      - run: mise '//2025:check'
