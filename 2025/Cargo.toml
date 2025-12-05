@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.100"
 const_format = "0.2.35"
+regex = "1.12.2"
