@@ -7,3 +7,6 @@ rust = { version = "stable", profile = "default" }
 
 [tasks.check-all]
 depends = ["//2024:check", "//2025:check"]
+
+[tasks.format-check-all]
+depends = ["//2024:format-check", "//2025:format-check"]
