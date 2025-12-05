@@ -1,8 +1,5 @@
 experimental_monorepo_root = true
 
-[settings]
-lockfile = true
-
 [tools]
 go = "latest"
 golangci-lint = "2.7.1" # Freeze since I'm not actively developing go

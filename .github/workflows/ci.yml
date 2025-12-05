@@ -9,9 +9,6 @@ jobs:
   test:
     name: "Lint/Build/Test"
     runs-on: ubuntu-latest
-    env:
-      MISE_LOCKED: 1
-      MISE_VERBOSE: 1
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
