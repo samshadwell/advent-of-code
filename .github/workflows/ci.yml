@@ -14,6 +14,14 @@ jobs:
       - uses: jdx/mise-action@v3
         with:
           experimental: true
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
       - run: mise '//2024:check'
   check-2025:
     name: "//2025:check"
@@ -23,4 +31,13 @@ jobs:
       - uses: jdx/mise-action@v3
         with:
           experimental: true
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - run: mise '//2025:check'
