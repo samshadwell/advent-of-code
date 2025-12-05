@@ -1,0 +1,12 @@
+[tasks.format-check]
+run = 'if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then exit 1; fi'
+
+[tasks.lint]
+run = 'golangci-lint run'
+
+[tasks.build]
+run = 'go build -v ./...'
+
+[tasks.test]
+depends = ["format-check", "lint", "build"]
+run = 'go test -v ./...'

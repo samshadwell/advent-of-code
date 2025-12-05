@@ -20,7 +20,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("error while opening input file: %v", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	input, err := parseInput(file)
 	if err != nil {

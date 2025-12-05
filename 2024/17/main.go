@@ -75,10 +75,7 @@ func NewVirtualMachine(regA, regB, regC int) *virtualMachine {
 func (vm *virtualMachine) Process(program []int) ([]int, error) {
 	output := make([]int, 0)
 
-	for {
-		if vm.pc+1 >= len(program) {
-			break
-		}
+	for vm.pc+1 < len(program) {
 		op, arg := program[vm.pc], program[vm.pc+1]
 
 		var err error

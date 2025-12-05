@@ -56,13 +56,14 @@ func main() {
 	for _, row := range p1Board {
 		row2 := make([]rune, 0, 2*len(row))
 		for _, rune := range row {
-			if rune == '#' {
+			switch rune {
+			case '#':
 				row2 = append(row2, '#', '#')
-			} else if rune == 'O' {
+			case 'O':
 				row2 = append(row2, '[', ']')
-			} else if rune == '.' {
+			case '.':
 				row2 = append(row2, '.', '.')
-			} else if rune == '@' {
+			case '@':
 				row2 = append(row2, '@', '.')
 			}
 		}

@@ -55,7 +55,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("error while opening file: %v", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	maze := grids.ParseRuneGrid(file)
 	part1, part2, err := findBestPath(maze)

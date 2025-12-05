@@ -6,42 +6,13 @@ on:
     branches: ["main"]
 
 jobs:
-  ci-2024:
-    name: "2024"
+  test:
+    name: "Lint/Build/Test"
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: "2024"
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version: "1.23.x"
-          cache-dependency-path: |
-            2024/go.sum
-      - name: Build
-        run: go build -v ./...
-      - name: Test
-        run: go test -v ./...
-  ci-2025:
-    name: "2025"
     env:
-      CARGO_TERM_COLOR: always
-      RUSTFLAGS: "-Dwarnings"
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: "2025"
+      MISE_LOCKED: 1
     steps:
       - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-      - name: Formatting check
-        run: cargo fmt -- --check
-      - name: Clippy lint
-        run: cargo clippy
-      - name: Build
-        run: cargo build
-      - name: Test
-        run: cargo test
+      - uses: jdx/mise-action@v3
+      - name: Run all tests
+        run: mise '//...:test*' --jobs 4

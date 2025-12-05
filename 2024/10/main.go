@@ -16,7 +16,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("error while opening file: %v", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	topo := make([][]int, 0, 1)
 	zeroes := make(map[grids.Location]bool)

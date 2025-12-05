@@ -53,11 +53,7 @@ func IsStrictlyMonotone(report []int) bool {
 		return false
 	}
 
-	increasing := true
-	if report[0] > report[1] {
-		increasing = false
-	}
-
+	increasing := report[1] >= report[0]
 	for i := 1; i < len(report); i++ {
 		if increasing && (report[i] <= report[i-1]) {
 			return false
