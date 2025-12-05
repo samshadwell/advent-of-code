@@ -15,4 +15,4 @@ jobs:
         with:
           experimental: true
       - name: Run all tests
-        run: mise '//...:test*' --jobs 4
+        run: mise '//:test-all' --jobs 4

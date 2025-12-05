@@ -8,5 +8,5 @@ run = 'golangci-lint run'
 run = 'go build -v ./...'
 
 [tasks.test]
-depends = ["format-check", "lint", "build"]
+depends = [":format-check", ":lint", ":build"]
 run = 'go test -v ./...'
