@@ -39,7 +39,7 @@ fn parse<R: BufRead>(reader: R) -> Result<(Vec<Interval>, Vec<Id>)> {
     Ok((intervals, ids))
 }
 
-fn parse_interval(s: &String) -> Result<Interval> {
+fn parse_interval(s: &str) -> Result<Interval> {
     static RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"^(\d+)-(\d+)$").expect("valid regex"));
     let caps = RE
