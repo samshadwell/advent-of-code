@@ -1,5 +1,6 @@
 module advent-of-code
 
+// Note: This is a minimum. Overridden to be newer by mise
 go 1.23.3
 
 require (

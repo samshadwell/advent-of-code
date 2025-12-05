@@ -14,7 +14,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to open file: %v", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	scanner := bufio.NewScanner(file)
 
 	part1 := 0

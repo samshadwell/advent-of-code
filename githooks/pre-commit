@@ -1,2 +1,4 @@
 #!/bin/bash
 set -e
+
+mise '//2025:format-check'

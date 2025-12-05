@@ -20,7 +20,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("error while opening file: %v", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	board := make([][]rune, 0, 1)
 

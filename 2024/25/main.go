@@ -79,11 +79,7 @@ func parseOne(scanner *bufio.Scanner) (key, lock, error) {
 	_ = scanner.Scan()
 
 	res := make([]int, 0, pinsPerLock)
-	isKey := true
-	if lines[0][0] == '#' {
-		isKey = false
-	}
-
+	isKey := lines[0][0] != '#'
 	for pin := 0; pin < pinsPerLock; pin++ {
 		for height := 0; height <= lockHeight; height++ {
 			var rIdx int

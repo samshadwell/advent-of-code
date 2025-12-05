@@ -6,42 +6,38 @@ on:
     branches: ["main"]
 
 jobs:
-  ci-2024:
-    name: "2024"
+  check-2024:
+    name: "//2024:check"
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: "2024"
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: jdx/mise-action@v3
         with:
-          go-version: "1.23.x"
-          cache-dependency-path: |
-            2024/go.sum
-      - name: Build
-        run: go build -v ./...
-      - name: Test
-        run: go test -v ./...
-  ci-2025:
-    name: "2025"
-    env:
-      CARGO_TERM_COLOR: always
-      RUSTFLAGS: "-Dwarnings"
+          experimental: true
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - run: mise '//2024:check'
+  check-2025:
+    name: "//2025:check"
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: "2025"
     steps:
       - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: jdx/mise-action@v3
         with:
-          components: rustfmt, clippy
-      - name: Formatting check
-        run: cargo fmt -- --check
-      - name: Clippy lint
-        run: cargo clippy
-      - name: Build
-        run: cargo build
-      - name: Test
-        run: cargo test
+          experimental: true
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - run: mise '//2025:check'

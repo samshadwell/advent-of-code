@@ -1,0 +1,15 @@
+[tasks.format-check]
+run = 'cargo fmt -- --check'
+
+[tasks.lint]
+run = 'cargo clippy'
+
+[tasks.build]
+run = 'cargo build'
+
+[tasks.test]
+depends = [':build']
+run = 'cargo test'
+
+[tasks.check]
+depends = [':format-check', ':lint', ':test']

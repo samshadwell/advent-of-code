@@ -70,7 +70,7 @@ func main() {
 		if err != nil {
 			log.Fatal("could not create memory profile: ", err)
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		if err := pprof.WriteHeapProfile(f); err != nil {
 			log.Fatal("could not write memory profile: ", err)
 		}
@@ -82,7 +82,7 @@ func parseInput() ([][]rune, grids.Location) {
 	if err != nil {
 		log.Fatalf("failed to open file: %v", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	board := grids.ParseRuneGrid(file)
 	start, ok := grids.FindRune(board, '^')
 	if !ok {
