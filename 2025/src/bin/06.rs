@@ -27,6 +27,18 @@ impl Operation {
             Self::Multiplication => a * b,
         }
     }
+
+    fn from_char(c: &char) -> Result<Self> {
+        match *c {
+            '+' => Ok(Self::Addition),
+            '*' => Ok(Self::Multiplication),
+            _ => Err(anyhow!("unrecognized operator character {}", c)),
+        }
+    }
+
+    fn apply_on_iter<'a>(&self, iter: impl Iterator<Item = &'a u64>) -> u64 {
+        iter.fold(self.identity(), |acc, v| self.apply(acc, *v))
+    }
 }
 
 impl FromStr for Operation {
@@ -64,12 +76,11 @@ fn part1_calc(equations: Vec<Vec<String>>) -> Result<u64> {
     equations
         .iter()
         .map(|equation| {
-            let mut rev = equation.iter().rev();
-            let op: Operation = rev
-                .next()
-                .ok_or_else(|| anyhow!("equation has no elements"))?
-                .parse()?;
-            rev.try_fold(op.identity(), |acc, x| {
+            let (op_str, num_strs) = equation
+                .split_last()
+                .ok_or_else(|| anyhow!("equation has no elements"))?;
+            let op: Operation = op_str.parse()?;
+            num_strs.iter().try_fold(op.identity(), |acc, x| {
                 x.parse()
                     .map(|val| op.apply(acc, val))
                     .map_err(anyhow::Error::from)
@@ -84,10 +95,10 @@ fn part1<R: BufRead>(reader: R) -> Result<u64> {
 }
 
 fn part2<R: BufRead>(reader: R) -> Result<u64> {
-    let mut input: Vec<Vec<char>> = Vec::new();
-    for line in reader.lines() {
-        input.push(line?.chars().collect());
-    }
+    let input: Vec<Vec<char>> = reader
+        .lines()
+        .map(|line| line.map(|s| s.chars().collect()))
+        .collect::<Result<Vec<_>, _>>()?;
     if input.is_empty() {
         return Ok(0);
     }
@@ -112,11 +123,8 @@ fn part2<R: BufRead>(reader: R) -> Result<u64> {
                     }
                     '+' | '*' => {
                         curr_nums.push(curr);
-                        total += if *c == '+' {
-                            curr_nums.iter().sum::<u64>()
-                        } else {
-                            curr_nums.iter().product()
-                        };
+                        let op = Operation::from_char(c)?;
+                        total += op.apply_on_iter(curr_nums.iter());
                         curr_nums.clear();
                         curr = 0;
                         continue 'outer;
