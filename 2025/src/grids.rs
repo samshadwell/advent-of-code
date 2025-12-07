@@ -14,10 +14,12 @@ pub struct AdjacentIter<'a> {
 }
 
 impl Position {
+    #[must_use]
     pub fn new(row: usize, col: usize) -> Self {
         Position { row, col }
     }
 
+    #[must_use]
     pub fn adjacent<'a>(&'a self) -> AdjacentIter<'a> {
         AdjacentIter::new(self)
     }
@@ -64,10 +66,12 @@ impl<'a> Iterator for AdjacentIter<'a> {
 pub struct Grid<T>(Vec<Vec<T>>);
 
 impl<T> Grid<T> {
+    #[must_use]
     pub fn new(g: Vec<Vec<T>>) -> Self {
         Grid(g)
     }
 
+    #[must_use]
     pub fn get(&self, p: &Position) -> Option<&T> {
         self.0.get(p.row).and_then(|row| row.get(p.col))
     }
@@ -84,6 +88,7 @@ impl<T> Grid<T> {
         }
     }
 
+    #[must_use]
     pub fn all_positions(&self) -> PositionsIter<'_, T> {
         PositionsIter::new(self)
     }

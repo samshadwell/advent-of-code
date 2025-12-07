@@ -62,7 +62,7 @@ fn is_repeating_number(num: u64, max_repeats: usize) -> bool {
 
         let subseq_len = bytes.len() / repeats;
         for i in subseq_len..bytes.len() {
-            if bytes[i] != bytes[i % subseq_len] {
+            if bytes.get(i) != bytes.get(i % subseq_len) {
                 continue 'outer;
             }
         }
