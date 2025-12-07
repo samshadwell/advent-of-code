@@ -32,7 +32,9 @@ fn max_joltage(bank: &str, num_digits: usize) -> Result<u128> {
         let remaining_to_find = num_digits - i;
         let end_idx = bytes.len() - remaining_to_find;
 
-        let (max_offset, max_digit) = bytes[start_idx..=end_idx]
+        let (max_offset, max_digit) = bytes
+            .get(start_idx..=end_idx)
+            .unwrap_or(&[])
             .iter()
             .enumerate()
             // using negated min_by_key to get the _first_ largest digit (max_by_key would return last)
