@@ -17,8 +17,7 @@ fn find_start(
         .ok_or_else(|| anyhow!("no lines in input"))??
         .chars()
         .enumerate()
-        .filter(|(_, char)| *char == 'S')
-        .map(|(idx, _)| idx)
+        .filter_map(|(idx, char)| (char == 'S').then_some(idx))
         .collect())
 }
 
@@ -39,13 +38,17 @@ fn part1<R: BufRead>(reader: R) -> Result<usize> {
                 }
                 Some(b'^') => {
                     num_splits += 1;
-                    next_lasers.push(laser - 1);
+                    if laser > 0 {
+                        next_lasers.push(laser - 1)
+                    }
                     next_lasers.push(laser + 1);
                 }
                 Some(b'.') => next_lasers.push(laser),
                 Some(c) => return Err(anyhow!("input malformed, unexpected character {}", c)),
             }
         }
+        // Note: next_lasers is already sorted due to iteration order, and no prisms are adjacent
+        // to one another
         next_lasers.dedup();
         lasers = next_lasers;
     }
@@ -56,10 +59,7 @@ fn part1<R: BufRead>(reader: R) -> Result<usize> {
 fn part2<R: BufRead>(reader: R) -> Result<usize> {
     let mut lines = reader.lines();
     let lasers = find_start(&mut lines)?;
-    let mut num_timelines = HashMap::new();
-    lasers.iter().for_each(|l| {
-        num_timelines.insert(*l, 1usize);
-    });
+    let mut num_timelines: HashMap<_, _> = lasers.iter().map(|l| (*l, 1usize)).collect();
 
     while let Some(maybe_line) = lines.next() {
         let line = maybe_line?;
@@ -72,7 +72,9 @@ fn part2<R: BufRead>(reader: R) -> Result<usize> {
                     ));
                 }
                 Some(b'^') => {
-                    *next_timelines.entry(idx - 1).or_insert(0) += timelines;
+                    if idx > 0 {
+                        *next_timelines.entry(idx - 1).or_insert(0) += timelines;
+                    }
                     *next_timelines.entry(idx + 1).or_insert(0) += timelines;
                 }
                 Some(b'.') => *next_timelines.entry(idx).or_insert(0) += timelines,
