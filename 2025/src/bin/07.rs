@@ -26,7 +26,7 @@ fn part1<R: BufRead>(reader: R) -> Result<usize> {
     let mut lasers = find_start(&mut lines)?;
 
     let mut num_splits = 0;
-    while let Some(maybe_line) = lines.next() {
+    for maybe_line in lines {
         let line = maybe_line?;
         let mut next_lasers: Vec<usize> = Vec::with_capacity(lasers.len());
         for laser in lasers {
@@ -61,7 +61,7 @@ fn part2<R: BufRead>(reader: R) -> Result<usize> {
     let lasers = find_start(&mut lines)?;
     let mut num_timelines: HashMap<_, _> = lasers.iter().map(|l| (*l, 1usize)).collect();
 
-    while let Some(maybe_line) = lines.next() {
+    for maybe_line in lines {
         let line = maybe_line?;
         let mut next_timelines = HashMap::new();
         for (idx, timelines) in num_timelines {
