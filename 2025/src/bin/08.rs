@@ -89,7 +89,10 @@ impl<'a, T: Eq + Hash> DisjointSetForest<'a, T> {
         }
     }
 
-    fn _find(&mut self, x: &'a T) -> Result<&'a T> {
+    // Path splitting. Compared to full path compression (per Wikipedia):
+    // > Tarjan and Van Leeuwen also developed one-pass Find algorithms that retain the same
+    // > worst-case complexity but are more efficient in practice.
+    fn find(&mut self, x: &'a T) -> Result<&'a T> {
         let mut curr = x;
         loop {
             let parent = *self
@@ -107,8 +110,8 @@ impl<'a, T: Eq + Hash> DisjointSetForest<'a, T> {
     }
 
     fn union(&mut self, x: &'a T, y: &'a T) -> Result<u64> {
-        let x_root = self._find(x)?;
-        let y_root = self._find(y)?;
+        let x_root = self.find(x)?;
+        let y_root = self.find(y)?;
 
         if x_root == y_root {
             return Ok(*self.sizes.get(x_root).expect("x is known to be in forest"));
@@ -122,9 +125,9 @@ impl<'a, T: Eq + Hash> DisjointSetForest<'a, T> {
         } else {
             (y_root, x_root)
         };
-        self.parents.insert(larger, smaller);
-        self.sizes.insert(smaller, x_size + y_size);
-        self.sizes.remove(larger);
+        self.parents.insert(smaller, larger);
+        self.sizes.insert(larger, x_size + y_size);
+        self.sizes.remove(smaller);
 
         Ok(x_size + y_size)
     }
