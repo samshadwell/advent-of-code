@@ -7,6 +7,7 @@ use std::cmp::{Ord, PartialOrd, Reverse};
 use std::collections::{BinaryHeap, HashMap};
 use std::hash::Hash;
 use std::io::{BufRead, BufReader};
+use std::str::FromStr;
 use std::sync::LazyLock;
 use std::time::Instant;
 
@@ -15,7 +16,6 @@ const INPUT_FILE: &str = concatcp!("input/", DAY, ".txt");
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 struct Point {
-    id: u64,
     x: u64,
     y: u64,
     z: u64,
@@ -27,8 +27,12 @@ impl Point {
             + (self.y.abs_diff(other.y)).pow(2)
             + (self.z.abs_diff(other.z)).pow(2)
     }
+}
 
-    fn parse_str(id: u64, s: &str) -> Result<Self> {
+impl FromStr for Point {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
         static RE: LazyLock<Regex> =
             LazyLock::new(|| Regex::new(r"^(\d+),(\d+),(\d+)$").expect("valid regex"));
         let caps = RE
@@ -38,7 +42,7 @@ impl Point {
         let y = caps[2].parse().context("parsing y")?;
         let z = caps[3].parse().context("parsing z")?;
 
-        Ok(Self { id, x, y, z })
+        Ok(Self { x, y, z })
     }
 }
 
@@ -61,75 +65,77 @@ impl PartialOrd for Pair<'_> {
     }
 }
 
-#[derive(Debug)]
-struct ConnectedGroups<'a> {
-    point_to_group: HashMap<&'a Point, u64>,
-    group_to_points: HashMap<u64, Vec<&'a Point>>,
+struct DisjointSetForest<'a, T> {
+    parents: HashMap<&'a T, &'a T>,
+    sizes: HashMap<&'a T, u64>,
 }
 
-impl<'a> ConnectedGroups<'a> {
+// See: https://en.wikipedia.org/wiki/Disjoint-set_data_structure#Operations
+impl<'a, T: Eq + Hash> DisjointSetForest<'a, T> {
     fn new() -> Self {
-        ConnectedGroups {
-            point_to_group: HashMap::new(),
-            group_to_points: HashMap::new(),
+        DisjointSetForest {
+            parents: HashMap::new(),
+            sizes: HashMap::new(),
         }
     }
 
-    // Returns the number of elements in the resulting group
-    fn connect(&mut self, a: &'a Point, b: &'a Point) -> usize {
-        let group_a = *self.point_to_group.get(a).unwrap_or(&a.id);
-        let group_b = *self.point_to_group.get(b).unwrap_or(&b.id);
-        if group_a == group_b {
-            return self
-                .group_to_points
-                .get(&group_a)
-                .map(|g| g.len())
-                .unwrap_or(1);
+    fn make_set(&mut self, x: &'a T) -> Result<()> {
+        if !self.parents.contains_key(x) {
+            self.parents.insert(x, x);
+            self.sizes.insert(x, 1);
+            Ok(())
+        } else {
+            Err(anyhow!("set with given key already exists"))
+        }
+    }
+
+    fn _find(&mut self, x: &'a T) -> Result<&'a T> {
+        let mut curr = x;
+        loop {
+            let parent = *self
+                .parents
+                .get(curr)
+                .ok_or_else(|| anyhow!("x not found"))?;
+            if parent == curr {
+                return Ok(curr);
+            }
+
+            let grandparent = *self.parents.get(parent).expect("parents should be valid");
+            self.parents.insert(curr, grandparent);
+            curr = parent;
+        }
+    }
+
+    fn union(&mut self, x: &'a T, y: &'a T) -> Result<u64> {
+        let x_root = self._find(x)?;
+        let y_root = self._find(y)?;
+
+        if x_root == y_root {
+            return Ok(*self.sizes.get(x_root).expect("x is known to be in forest"));
         }
 
-        // Ensure both groups exist in group_to_points before merging
-        self.group_to_points
-            .entry(group_a)
-            .or_insert_with(|| vec![a]);
-        self.group_to_points
-            .entry(group_b)
-            .or_insert_with(|| vec![b]);
+        let x_size = *self.sizes.get(x_root).expect("x has known size");
+        let y_size = *self.sizes.get(y_root).expect("y has known size");
 
-        let new_group_id = group_a.min(group_b);
-        let old_group_id = group_a.max(group_b);
+        let (smaller, larger) = if x_size < y_size {
+            (x_root, y_root)
+        } else {
+            (y_root, x_root)
+        };
+        self.parents.insert(larger, smaller);
+        self.sizes.insert(smaller, x_size + y_size);
+        self.sizes.remove(larger);
 
-        let old_points = self
-            .group_to_points
-            .remove(&old_group_id)
-            .expect("group guaranteed to exist");
-
-        for point in &old_points {
-            self.point_to_group.insert(point, new_group_id);
-        }
-
-        let new_group = self
-            .group_to_points
-            .get_mut(&new_group_id)
-            .expect("should exist");
-        new_group.extend(old_points);
-        new_group.len()
+        Ok(x_size + y_size)
     }
 
     fn part1_score(&self) -> u64 {
-        self.group_to_points
-            .values()
-            .map(|v| v.len() as u64)
-            .k_largest(3)
-            .product()
+        self.sizes.values().k_largest(3).product()
     }
 }
 
 fn read_points<R: BufRead>(reader: R) -> Result<Vec<Point>> {
-    reader
-        .lines()
-        .enumerate()
-        .map(|(i, l)| Point::parse_str(i as u64, &l?))
-        .collect()
+    reader.lines().map(|l| Point::from_str(&l?)).collect()
 }
 
 fn make_pairs_min_heap<'a>(points: &'a [Point]) -> BinaryHeap<Reverse<Pair<'a>>> {
@@ -144,22 +150,28 @@ fn part1<R: BufRead>(reader: R, num_connections: usize) -> Result<u64> {
     let points = read_points(reader)?;
     let mut heap = make_pairs_min_heap(&points);
 
-    let mut connected_groups = ConnectedGroups::new();
+    let mut set_forest = DisjointSetForest::new();
+    for point in &points {
+        set_forest.make_set(point)?;
+    }
     for _ in 0..num_connections {
         let to_connect = heap
             .pop()
             .ok_or_else(|| anyhow!("ran out of elements to connect"))?
             .0;
-        connected_groups.connect(to_connect.a, to_connect.b);
+        set_forest.union(to_connect.a, to_connect.b)?;
     }
-    Ok(connected_groups.part1_score())
+    Ok(set_forest.part1_score())
 }
 
 fn part2<R: BufRead>(reader: R) -> Result<u64> {
     let points = read_points(reader)?;
     let mut heap = make_pairs_min_heap(&points);
 
-    let mut connected_groups = ConnectedGroups::new();
+    let mut set_forest = DisjointSetForest::new();
+    for point in &points {
+        set_forest.make_set(point)?;
+    }
     let num_points = points.len();
     loop {
         let Pair { a, b } = heap
@@ -168,8 +180,8 @@ fn part2<R: BufRead>(reader: R) -> Result<u64> {
                 anyhow!("programmer error, should always have sufficient elements to fully connect")
             })?
             .0;
-        let group_size = connected_groups.connect(a, b);
-        if group_size == num_points {
+        let group_size = set_forest.union(a, b)?;
+        if group_size == num_points as u64 {
             return Ok(a.x * b.x);
         }
     }
