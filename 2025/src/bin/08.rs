@@ -5,6 +5,7 @@ use itertools::Itertools;
 use regex::Regex;
 use std::cmp::{Ord, PartialOrd, Reverse};
 use std::collections::{BinaryHeap, HashMap};
+use std::hash::Hash;
 use std::io::{BufRead, BufReader};
 use std::sync::LazyLock;
 use std::time::Instant;
@@ -42,19 +43,19 @@ impl Point {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-struct Pair<'a, 'b> {
+struct Pair<'a> {
     a: &'a Point,
-    b: &'b Point,
+    b: &'a Point,
 }
 
-// Order pairs of points by the distaince between their constituent points
-impl Ord for Pair<'_, '_> {
+// Order pairs of points by the distance between their constituent points
+impl Ord for Pair<'_> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         (self.a.square_distance(self.b)).cmp(&other.a.square_distance(other.b))
     }
 }
 
-impl PartialOrd for Pair<'_, '_> {
+impl PartialOrd for Pair<'_> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
@@ -131,16 +132,12 @@ fn read_points<R: BufRead>(reader: R) -> Result<Vec<Point>> {
         .collect()
 }
 
-fn make_pairs_min_heap<'a>(points: &'a [Point]) -> BinaryHeap<Reverse<Pair<'a, 'a>>> {
-    let mut heap = BinaryHeap::new();
-    for (i, a) in points.iter().enumerate() {
-        for b in points.get(i + 1..).unwrap_or_default() {
-            let pair = Pair { a, b };
-            // Reverse to make min-heap
-            heap.push(Reverse(pair));
-        }
-    }
-    heap
+fn make_pairs_min_heap<'a>(points: &'a [Point]) -> BinaryHeap<Reverse<Pair<'a>>> {
+    points
+        .iter()
+        .tuple_combinations()
+        .map(|(a, b)| Reverse(Pair { a, b }))
+        .collect()
 }
 
 fn part1<R: BufRead>(reader: R, num_connections: usize) -> Result<u64> {
