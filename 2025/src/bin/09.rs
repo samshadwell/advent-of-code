@@ -53,39 +53,36 @@ fn part1<R: BufRead>(reader: R) -> Result<u64> {
 }
 
 fn valid_corners(coordinates: &[Coordinate], a: &Coordinate, b: &Coordinate) -> bool {
-    // Case 1: There are any vertices strictly within the bounding box. Must be invalid
-    if coordinates.iter().any(|c| {
-        c.x > a.x.min(b.x) && c.x < a.x.max(b.x) && c.y > a.y.min(b.y) && c.y < a.y.max(b.y)
-    }) {
-        return false;
-    }
-    // Case 2: Some line spans the rectangle from outside the bounding box
-    for (first, second) in coordinates.iter().circular_tuple_windows() {
-        // Note: we know these points share either an x or y
-        let same_x = first.x == second.x;
-        if same_x {
-            // Rules out our candidates if x is within interval and ys are to either side (vertical line)
-            let line_x = first.x;
-            if line_x > a.x.min(b.x)
-                && line_x < a.x.max(b.x)
-                && first.y.min(second.y) <= a.y.min(b.y)
-                && first.y.max(second.y) >= a.y.max(b.y)
-            {
-                return false;
+    let (min_x, max_x) = (a.x.min(b.x), a.x.max(b.x));
+    let (min_y, max_y) = (a.y.min(b.y), a.y.max(b.y));
+
+    // No vertices are strictly within bounding box AND
+    !coordinates
+        .iter()
+        .any(|c| c.x > min_x && c.x < max_x && c.y > min_y && c.y < max_y) &&
+    // No edges span the bounding box
+    !coordinates
+        .iter()
+        .circular_tuple_windows()
+        .any(|(first, second)| {
+            // Note: we know these points share either an x or y in the input
+            let same_x = first.x == second.x;
+            if same_x {
+                let edge_x = first.x;
+                // True if a vertical line spanning bounding box
+                edge_x > min_x
+                    && edge_x < max_x
+                    && first.y.min(second.y) <= min_y
+                    && first.y.max(second.y) >= max_y
+            } else {
+                let edge_y = first.y;
+                // True if horizontal line spanning bounding box
+                edge_y > a.y.min(b.y)
+                    && edge_y < a.y.max(b.y)
+                    && first.x.min(second.x) <= a.x.min(b.x)
+                    && first.x.max(second.x) >= a.x.max(b.x)
             }
-        } else {
-            // y is within interval and xs are to either side (horizontal line)
-            let line_y = first.y;
-            if line_y > a.y.min(b.y)
-                && line_y < a.y.max(b.y)
-                && first.x.min(second.x) <= a.x.min(b.x)
-                && first.x.max(second.x) >= a.x.max(b.x)
-            {
-                return false;
-            }
-        }
-    }
-    true
+        })
 }
 
 fn part2<R: BufRead>(reader: R) -> Result<u64> {
