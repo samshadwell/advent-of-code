@@ -1,7 +1,7 @@
 use adv_code_2025::start_day;
 use anyhow::{Result, anyhow};
 use const_format::concatcp;
-use std::cmp::Reverse;
+use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 use std::io::BufReader;
 use std::time::Instant;
@@ -131,15 +131,38 @@ fn part1(machines: &[Machine]) -> Result<u64> {
 }
 
 fn min_p2_button_pushes(m: &Machine) -> Result<u64> {
+    // Optimization: Sort buttons to try "biggest" impact first
+    let mut sorted_buttons: Vec<&Button> = m.buttons.iter().collect();
+    sorted_buttons.sort_by(|a, b| b.toggled_lights.len().cmp(&a.toggled_lights.len()));
+
     let start = vec![0; m.joltage_requirements.len()];
     let mut heap = BinaryHeap::new();
 
-    let max_cardinality_button = m
-        .buttons
-        .iter()
+    let max_cardinality = sorted_buttons
+        .first()
         .map(|b| b.toggled_lights.len())
-        .max()
-        .expect("at least one button");
+        .expect("at least one button will exist") as u64;
+
+    #[derive(Eq, PartialEq)]
+    struct State {
+        f_score: u64,
+        cost: u64,
+        node: Vec<u64>,
+        min_idx: usize,
+    }
+
+    impl Ord for State {
+        fn cmp(&self, other: &Self) -> Ordering {
+            // Reversed because BinaryHeap is a MaxHeap, we want MinHeap behavior
+            other.f_score.cmp(&self.f_score)
+        }
+    }
+
+    impl PartialOrd for State {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
 
     let heuristic_distance = |state: &Vec<u64>| -> u64 {
         let mut distance = 0;
@@ -157,37 +180,57 @@ fn min_p2_button_pushes(m: &Machine) -> Result<u64> {
             distance += dist;
             max_single = max_single.max(dist);
         }
-        distance
-            .div_ceil(max_cardinality_button as u64)
-            .max(max_single)
+        distance.div_ceil(max_cardinality).max(max_single)
     };
 
-    heap.push((Reverse(heuristic_distance(&start)), start.clone()));
+    heap.push(State {
+        f_score: heuristic_distance(&start),
+        cost: 0,
+        node: start.clone(),
+        min_idx: 0,
+    });
     let mut g_score = HashMap::new();
-    g_score.insert(start, 0);
+    g_score.insert((start, 0), 0);
 
-    while let Some((dist, node)) = heap.pop() {
+    while let Some(State {
+        cost,
+        node,
+        min_idx,
+        ..
+    }) = heap.pop()
+    {
         if node == m.joltage_requirements {
-            return match dist.0 {
-                u64::MAX => Err(anyhow!("no suitable path found")),
-                _ => Ok(dist.0),
-            };
+            return Ok(cost);
         }
 
-        for b in &m.buttons {
+        if let Some(&best_g) = g_score.get(&(node.clone(), min_idx))
+            && cost > best_g
+        {
+            continue;
+        }
+
+        for (i, b) in sorted_buttons.iter().enumerate().skip(min_idx) {
             let mut neighbor = node.clone();
             for to_incr in &b.toggled_lights {
                 let n = neighbor.get_mut(*to_incr).expect("button valid");
                 *n += 1;
             }
 
-            let tentative_g = g_score.get(&node).expect("g score must exist") + 1;
-            let heuristic_dist = heuristic_distance(&neighbor);
-            if tentative_g < *g_score.get(&neighbor).unwrap_or(&u64::MAX)
-                && heuristic_dist < u64::MAX
-            {
-                g_score.insert(neighbor.clone(), tentative_g);
-                heap.push((Reverse(tentative_g + heuristic_dist), neighbor));
+            let new_cost = cost + 1;
+            let h = heuristic_distance(&neighbor);
+            if h == u64::MAX {
+                continue;
+            }
+            let new_f = new_cost + h;
+            let state_key = (neighbor.clone(), i);
+            if new_cost < *g_score.get(&state_key).unwrap_or(&u64::MAX) {
+                g_score.insert(state_key, new_cost);
+                heap.push(State {
+                    f_score: new_f,
+                    cost: new_cost,
+                    node: neighbor,
+                    min_idx: i,
+                });
             }
         }
     }
@@ -196,7 +239,7 @@ fn min_p2_button_pushes(m: &Machine) -> Result<u64> {
 }
 
 fn part2(machines: &[Machine]) -> Result<u64> {
-    machines.iter().map(min_p2_button_pushes).sum()
+    machines.iter().map(|m| dbg!(min_p2_button_pushes(m))).sum()
 }
 
 fn main() -> Result<()> {
