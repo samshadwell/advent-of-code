@@ -5,7 +5,6 @@ use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 use std::io::BufReader;
 use std::time::Instant;
-use std::u64;
 
 const DAY: &str = "10";
 const INPUT_FILE: &str = concatcp!("input/", DAY, ".txt");
@@ -128,7 +127,7 @@ fn min_p1_button_pushes(m: &Machine) -> Result<u64> {
 }
 
 fn part1(machines: &[Machine]) -> Result<u64> {
-    machines.iter().map(|m| min_p1_button_pushes(m)).sum()
+    machines.iter().map(min_p1_button_pushes).sum()
 }
 
 fn min_p2_button_pushes(m: &Machine) -> Result<u64> {
@@ -197,7 +196,7 @@ fn min_p2_button_pushes(m: &Machine) -> Result<u64> {
 }
 
 fn part2(machines: &[Machine]) -> Result<u64> {
-    machines.iter().map(|m| min_p2_button_pushes(m)).sum()
+    machines.iter().map(min_p2_button_pushes).sum()
 }
 
 fn main() -> Result<()> {
