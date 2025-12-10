@@ -6,7 +6,9 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.100"
 const_format = "0.2.35"
+good_lp = { version = "1.0", features = ["microlp"], default-features = false }
 itertools = "0.14.0"
+nom = "8.0.0"
 regex = "1.12.2"
 
 [lints.clippy]
