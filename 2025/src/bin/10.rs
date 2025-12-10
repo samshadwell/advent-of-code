@@ -1,8 +1,9 @@
 use adv_code_2025::start_day;
 use anyhow::{Result, anyhow};
 use const_format::concatcp;
-use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
+use good_lp::microlp;
+use good_lp::{Solution, SolverModel, variable, variables};
+use std::collections::{HashSet, VecDeque};
 use std::io::BufReader;
 use std::time::Instant;
 
@@ -32,7 +33,7 @@ struct Button {
 struct Machine {
     goal_state: Vec<Light>,
     buttons: Vec<Button>,
-    joltage_requirements: Vec<u64>,
+    joltage_requirements: Vec<u32>,
 }
 
 mod parse {
@@ -41,7 +42,7 @@ mod parse {
     use nom::IResult;
     use nom::Parser;
     use nom::branch::alt;
-    use nom::character::complete::{char, multispace0, u64, usize};
+    use nom::character::complete::{char, multispace0, u32, usize};
     use nom::combinator::value;
     use nom::multi::{many0, many1, separated_list1};
     use nom::sequence::{delimited, terminated};
@@ -65,8 +66,8 @@ mod parse {
         Ok((input, super::Button { toggled_lights }))
     }
 
-    fn joltage_requirements(input: &str) -> IResult<&str, Vec<u64>> {
-        delimited(char('{'), separated_list1(char(','), u64), char('}')).parse(input)
+    fn joltage_requirements(input: &str) -> IResult<&str, Vec<u32>> {
+        delimited(char('{'), separated_list1(char(','), u32), char('}')).parse(input)
     }
 
     fn machine(input: &str) -> IResult<&str, super::Machine> {
@@ -130,116 +131,43 @@ fn part1(machines: &[Machine]) -> Result<u64> {
     machines.iter().map(min_p1_button_pushes).sum()
 }
 
-fn min_p2_button_pushes(m: &Machine) -> Result<u64> {
-    // Optimization: Sort buttons to try "biggest" impact first
-    let mut sorted_buttons: Vec<&Button> = m.buttons.iter().collect();
-    sorted_buttons.sort_by(|a, b| b.toggled_lights.len().cmp(&a.toggled_lights.len()));
+fn min_p2(m: &Machine) -> Result<u32> {
+    // Use an LP solver (microlp) to solve, my "best" normal solution was painfully slow
+    let mut vars = variables!();
 
-    let start = vec![0; m.joltage_requirements.len()];
-    let mut heap = BinaryHeap::new();
+    // Each variable, i, corresponds to the number of times button i is pressed
+    let counts: Vec<_> = (0..m.buttons.len())
+        .map(|_| vars.add(variable().min(0).integer()))
+        .collect();
 
-    let max_cardinality = sorted_buttons
-        .first()
-        .map(|b| b.toggled_lights.len())
-        .expect("at least one button will exist") as u64;
+    // Objective: Minimize sum of all counts (total button presses)
+    let objective = counts.iter().sum::<good_lp::Expression>();
+    let mut problem = vars.minimise(objective).using(microlp);
 
-    #[derive(Eq, PartialEq)]
-    struct State {
-        f_score: u64,
-        cost: u64,
-        node: Vec<u64>,
-        min_idx: usize,
-    }
-
-    impl Ord for State {
-        fn cmp(&self, other: &Self) -> Ordering {
-            // Reversed because BinaryHeap is a MaxHeap, we want MinHeap behavior
-            other.f_score.cmp(&self.f_score)
-        }
-    }
-
-    impl PartialOrd for State {
-        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-            Some(self.cmp(other))
-        }
-    }
-
-    let heuristic_distance = |state: &Vec<u64>| -> u64 {
-        let mut distance = 0;
-        let mut max_single = 0;
-        for (i, n) in state.iter().enumerate() {
-            let req_n = m
-                .joltage_requirements
-                .get(i)
-                .expect("state len matches joltage len");
-            if n > req_n {
-                // No number of button presses make joltage go down
-                return u64::MAX;
-            }
-            let dist = req_n - n;
-            distance += dist;
-            max_single = max_single.max(dist);
-        }
-        distance.div_ceil(max_cardinality).max(max_single)
-    };
-
-    heap.push(State {
-        f_score: heuristic_distance(&start),
-        cost: 0,
-        node: start.clone(),
-        min_idx: 0,
-    });
-    let mut g_score = HashMap::new();
-    g_score.insert((start, 0), 0);
-
-    while let Some(State {
-        cost,
-        node,
-        min_idx,
-        ..
-    }) = heap.pop()
-    {
-        if node == m.joltage_requirements {
-            return Ok(cost);
-        }
-
-        if let Some(&best_g) = g_score.get(&(node.clone(), min_idx))
-            && cost > best_g
-        {
-            continue;
-        }
-
-        for (i, b) in sorted_buttons.iter().enumerate().skip(min_idx) {
-            let mut neighbor = node.clone();
-            for to_incr in &b.toggled_lights {
-                let n = neighbor.get_mut(*to_incr).expect("button valid");
-                *n += 1;
-            }
-
-            let new_cost = cost + 1;
-            let h = heuristic_distance(&neighbor);
-            if h == u64::MAX {
-                continue;
-            }
-            let new_f = new_cost + h;
-            let state_key = (neighbor.clone(), i);
-            if new_cost < *g_score.get(&state_key).unwrap_or(&u64::MAX) {
-                g_score.insert(state_key, new_cost);
-                heap.push(State {
-                    f_score: new_f,
-                    cost: new_cost,
-                    node: neighbor,
-                    min_idx: i,
-                });
+    // Constraints: In the end, we must get the required joltage vector
+    for (jolt_idx, &target_val) in m.joltage_requirements.iter().enumerate() {
+        let mut row_expr = good_lp::Expression::from(0);
+        for (btn_idx, btn) in m.buttons.iter().enumerate() {
+            if btn.toggled_lights.contains(&jolt_idx) {
+                row_expr += counts.get(btn_idx).expect("button indeces are valid");
             }
         }
+
+        problem.add_constraint(row_expr.eq(target_val));
     }
 
-    Err(anyhow!("no combination of button presses exists"))
+    let solution = problem
+        .solve()
+        .map_err(|e| anyhow!("Solver error: {}", e))?;
+
+    let total_presses = solution.eval(counts.iter().sum::<good_lp::Expression>());
+    // total_presses is float type, but we have constrained to be integer above
+    // so conversion should succeed
+    Ok(total_presses as u32)
 }
 
-fn part2(machines: &[Machine]) -> Result<u64> {
-    machines.iter().map(|m| dbg!(min_p2_button_pushes(m))).sum()
+fn part2(machines: &[Machine]) -> Result<u32> {
+    machines.iter().map(min_p2).sum()
 }
 
 fn main() -> Result<()> {
