@@ -13,7 +13,7 @@ use std::time::Instant;
 const DAY: &str = "11";
 const INPUT_FILE: &str = concatcp!("input/", DAY, ".txt");
 
-type Graph<'a> = HashMap<String, HashSet<String>>;
+type Graph = HashMap<String, HashSet<String>>;
 
 fn parse_line(input: &str) -> IResult<&str, (&str, Vec<&str>)> {
     let (input, node) = terminated(alpha1, char(':')).parse(input)?;
@@ -21,7 +21,7 @@ fn parse_line(input: &str) -> IResult<&str, (&str, Vec<&str>)> {
     Ok((input, (node, neighbors)))
 }
 
-fn parse<R: BufRead>(reader: R) -> Result<Graph<'static>> {
+fn parse<R: BufRead>(reader: R) -> Result<Graph> {
     let mut g = HashMap::new();
     for line in reader.lines() {
         let l = line?;
@@ -30,42 +30,43 @@ fn parse<R: BufRead>(reader: R) -> Result<Graph<'static>> {
             .finish()
             .map_err(|e| anyhow!("Parse error: {}", e))?;
         let node_owned = node.to_string();
-        let adj = g.entry(node_owned).or_insert_with(HashSet::new);
+        let adj: &mut HashSet<String> = g.entry(node_owned).or_default();
         adj.extend(neighbors.iter().map(|n| n.to_string()));
         for nbr in neighbors {
-            g.entry(nbr.to_string()).or_insert_with(HashSet::new);
+            g.entry(nbr.to_string()).or_default();
         }
     }
     Ok(g)
 }
 
 fn part1(g: &Graph) -> usize {
-    let mut num_ways: HashMap<&str, usize> = HashMap::new();
-    let mut queue: VecDeque<_> = VecDeque::new();
+    let mut num_ways = HashMap::new();
+    let mut queue = VecDeque::new();
 
     let start_label = "you";
-    num_ways.insert(start_label, 1usize);
+    num_ways.insert(start_label, 1);
     queue.push_back(start_label);
     while let Some(node) = queue.pop_front() {
-        let n = *num_ways.get(node).unwrap_or(&0);
+        let n = num_ways.get(node).copied().unwrap_or_default();
         if n == 0 {
             continue;
         }
-        let neighbors = g.get(node);
-        if neighbors.is_none() || neighbors.is_some_and(|nbrs| nbrs.is_empty()) {
-            continue;
+        if let Some(neighbors) = g.get(node) {
+            if neighbors.is_empty() {
+                continue;
+            }
+            for nbr in neighbors {
+                *num_ways.entry(nbr).or_insert(0) += n;
+                queue.push_back(nbr);
+            }
+            num_ways.insert(node, 0);
         }
-        for nbr in neighbors.unwrap() {
-            *num_ways.entry(nbr).or_insert(0) += n;
-            queue.push_back(nbr);
-        }
-        num_ways.insert(node, 0);
     }
 
-    *num_ways.get("out").unwrap_or(&0)
+    num_ways.get("out").copied().unwrap_or_default()
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 // One insight: Rather than storing exactly which of "dac" and "fft" each path has seen,
 // we can just store how many. If there are no cycles, then in valid paths seeing two
 // means we've seen both.
@@ -76,22 +77,6 @@ struct P2Ways {
 }
 
 impl P2Ways {
-    fn zero() -> Self {
-        Self {
-            pass_neither: 0,
-            pass_one: 0,
-            pass_both: 0,
-        }
-    }
-
-    fn one() -> Self {
-        Self {
-            pass_neither: 1,
-            pass_one: 0,
-            pass_both: 0,
-        }
-    }
-
     fn pass_special(&mut self) {
         *self = Self {
             pass_neither: 0,
@@ -107,23 +92,28 @@ impl P2Ways {
 
 impl ops::AddAssign for P2Ways {
     fn add_assign(&mut self, rhs: Self) {
-        *self = Self {
-            pass_neither: self.pass_neither + rhs.pass_neither,
-            pass_one: self.pass_one + rhs.pass_one,
-            pass_both: self.pass_both + rhs.pass_both,
-        }
+        self.pass_neither += rhs.pass_neither;
+        self.pass_one += rhs.pass_one;
+        self.pass_both += rhs.pass_both;
     }
 }
 
 fn part2(g: &Graph) -> usize {
-    let mut num_ways: HashMap<&str, P2Ways> = HashMap::new();
-    let mut queue: VecDeque<_> = VecDeque::new();
+    let mut num_ways = HashMap::new();
+    let mut queue = VecDeque::new();
 
     let start_label = "svr";
-    num_ways.insert(start_label, P2Ways::one());
+    num_ways.insert(
+        start_label,
+        P2Ways {
+            pass_neither: 1,
+            pass_one: 0,
+            pass_both: 0,
+        },
+    );
     queue.push_back(start_label);
     while let Some(node) = queue.pop_front() {
-        let mut n = num_ways.get(node).copied().unwrap_or(P2Ways::zero());
+        let mut n = num_ways.get(node).copied().unwrap_or_default();
         if n.is_zero() {
             continue;
         }
@@ -132,18 +122,19 @@ fn part2(g: &Graph) -> usize {
             n.pass_special();
         }
 
-        let neighbors = g.get(node);
-        if neighbors.is_none() || neighbors.is_some_and(|nbrs| nbrs.is_empty()) {
-            continue;
+        if let Some(neighbors) = g.get(node) {
+            if neighbors.is_empty() {
+                continue;
+            }
+            for nbr in neighbors {
+                *num_ways.entry(nbr).or_default() += n;
+                queue.push_back(nbr);
+            }
+            num_ways.insert(node, P2Ways::default());
         }
-        for nbr in neighbors.unwrap() {
-            *num_ways.entry(nbr).or_insert(P2Ways::zero()) += n;
-            queue.push_back(nbr);
-        }
-        num_ways.insert(node, P2Ways::zero());
     }
 
-    num_ways.get("out").unwrap_or(&P2Ways::zero()).pass_both
+    num_ways.get("out").copied().unwrap_or_default().pass_both
 }
 
 fn main() -> Result<()> {
