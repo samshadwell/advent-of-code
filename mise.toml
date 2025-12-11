@@ -2,5 +2,5 @@ experimental_monorepo_root = true
 
 [tools]
 go = "latest"
-golangci-lint = "2.7.2"
+golangci-lint = "2"
 rust = { version = "stable", profile = "default" }
