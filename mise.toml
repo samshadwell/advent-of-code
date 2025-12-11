@@ -2,5 +2,5 @@ experimental_monorepo_root = true
 
 [tools]
 go = "latest"
-golangci-lint = "2.7.1" # Freeze since I'm not actively developing go
+golangci-lint = "2.7.2"
 rust = { version = "stable", profile = "default" }
