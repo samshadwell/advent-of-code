@@ -30,10 +30,10 @@ fn parse<R: BufRead>(reader: R) -> Result<Graph<'static>> {
             .finish()
             .map_err(|e| anyhow!("Parse error: {}", e))?;
         let node_owned = node.to_string();
-        let adj = g.entry(node_owned).or_insert_with(|| HashSet::new());
+        let adj = g.entry(node_owned).or_insert_with(HashSet::new);
         adj.extend(neighbors.iter().map(|n| n.to_string()));
         for nbr in neighbors {
-            g.entry(nbr.to_string()).or_insert_with(|| HashSet::new());
+            g.entry(nbr.to_string()).or_insert_with(HashSet::new);
         }
     }
     Ok(g)
@@ -123,7 +123,7 @@ fn part2(g: &Graph) -> usize {
     num_ways.insert(start_label, P2Ways::one());
     queue.push_back(start_label);
     while let Some(node) = queue.pop_front() {
-        let mut n = num_ways.get(node).map(|n| *n).unwrap_or(P2Ways::zero());
+        let mut n = num_ways.get(node).copied().unwrap_or(P2Ways::zero());
         if n.is_zero() {
             continue;
         }
