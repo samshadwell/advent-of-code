@@ -23,8 +23,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - run: mise '//2024:check'
-  check-2025:
-    name: "//2025:check"
+  lint-2025:
+    name: "//2025:lint and //2025:format-check"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -39,5 +39,23 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - run: mise '//2025:check'
+          key: ${{ runner.os }}-cargo-lint-${{ hashFiles('**/Cargo.lock') }}
+      - run: mise '//2025:lint' && mise '//2025:format-check'
+  test-2025:
+    name: "//2025:test"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v3
+        with:
+          experimental: true
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+      - run: mise '//2025:test'
