@@ -40,7 +40,7 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-lint-${{ hashFiles('**/Cargo.lock') }}
-      - run: mise '//2025:lint' && mise '//2025:format-check'
+      - run: mise run '//2025:lint' ':::' '//2025:format-check'
   test-2025:
     name: "2025 - test"
     runs-on: ubuntu-latest
