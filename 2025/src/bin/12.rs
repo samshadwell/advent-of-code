@@ -16,7 +16,7 @@ struct Shape {
 impl Shape {
     fn new(shape: Vec<Vec<bool>>) -> Self {
         Self {
-            occupied_spaces: shape.iter().flatten().map(|b| if *b { 1 } else { 0 }).sum(),
+            occupied_spaces: shape.iter().flatten().filter(|&&b| b).count(),
         }
     }
 }
@@ -53,13 +53,17 @@ mod parse {
         let mut buf = String::new();
         reader.read_to_string(&mut buf)?;
         let input = &buf;
-        let (input, shapes) = many1(delimited(shape_header, shape, newline))
+        let (remaining, shapes) = many1(delimited(shape_header, shape, newline))
             .parse(input)
             .map_err(|e| anyhow!("Shape parse error: {}", e))?;
-        let (_input, regions) = many1(region)
-            .parse(input)
+        let (remaining, regions) = many1(region)
+            .parse(remaining)
             .finish()
             .map_err(|e| anyhow!("Region parse error: {}", e))?;
+
+        if !remaining.is_empty() {
+            return Err(anyhow!("Failed to parse entire input"));
+        }
 
         Ok(Input { shapes, regions })
     }
@@ -106,7 +110,7 @@ fn region_definitely_possible(r: &Region) -> bool {
 
 // True if there are at least enough empty spaces for the shapes to
 // occupy (if we could cut the shapes up)
-fn region_maybe_possible(r: &Region, shapes: &Vec<Shape>) -> bool {
+fn region_maybe_possible(r: &Region, shapes: &[Shape]) -> bool {
     let min_required_spaces: usize = r
         .requirements
         .iter()
@@ -201,9 +205,9 @@ mod tests {
 
     #[test]
     fn part_1() {
-        let expected = 2;
+        let expected = 0..3;
         let input = base_parse::parse(BufReader::new(TEST.as_bytes())).expect("parse succeeds");
-        let result = dbg!(part1(&input));
-        assert!(result.unwrap().contains(&expected));
+        let result = part1(&input);
+        assert_eq!(result.unwrap(), expected);
     }
 }
