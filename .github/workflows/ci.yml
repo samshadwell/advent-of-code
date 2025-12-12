@@ -31,15 +31,10 @@ jobs:
       - uses: jdx/mise-action@v3
         with:
           experimental: true
-      - uses: actions/cache@v4
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.8.2
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-lint-${{ hashFiles('**/Cargo.lock') }}
+          workspaces: "2025"
       - run: mise run '//2025:lint' ':::' '//2025:format-check'
   test-2025:
     name: "2025 - test"
@@ -49,13 +44,8 @@ jobs:
       - uses: jdx/mise-action@v3
         with:
           experimental: true
-      - uses: actions/cache@v4
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.8.2
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+          workspaces: "2025"
       - run: mise '//2025:test'
