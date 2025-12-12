@@ -7,7 +7,7 @@ on:
 
 jobs:
   check-2024:
-    name: "//2024:check"
+    name: "2024 - check"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -24,7 +24,7 @@ jobs:
             ${{ runner.os }}-go-
       - run: mise '//2024:check'
   lint-2025:
-    name: "//2025:lint and //2025:format-check"
+    name: "2025 - lint and format-check"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -42,7 +42,7 @@ jobs:
           key: ${{ runner.os }}-cargo-lint-${{ hashFiles('**/Cargo.lock') }}
       - run: mise '//2025:lint' && mise '//2025:format-check'
   test-2025:
-    name: "//2025:test"
+    name: "2025 - test"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
