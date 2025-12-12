@@ -23,8 +23,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - run: mise '//2024:check'
-  lint-2025:
-    name: "2025 - lint and format-check"
+  check-2025:
+    name: "2025 - check"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -35,17 +35,4 @@ jobs:
         uses: Swatinem/rust-cache@v2.8.2
         with:
           workspaces: "2025"
-      - run: mise run '//2025:lint' ':::' '//2025:format-check'
-  test-2025:
-    name: "2025 - test"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: jdx/mise-action@v3
-        with:
-          experimental: true
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2.8.2
-        with:
-          workspaces: "2025"
-      - run: mise '//2025:test'
+      - run: mise run '//2025:check'
