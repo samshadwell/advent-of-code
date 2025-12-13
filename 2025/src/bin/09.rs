@@ -71,27 +71,22 @@ impl CompressedGrid {
         // #.#      ##
         // ...  and ##
         // #.#
-        let mut x_remap = HashMap::new();
-        coordinates
+        let x_remap: HashMap<_, _> = coordinates
             .iter()
             .map(|c| c.x)
             .sorted()
             .unique()
             .enumerate()
-            .for_each(|(idx, x)| {
-                x_remap.insert(x, 2 * idx);
-            });
-
-        let mut y_remap = HashMap::new();
-        coordinates
+            .map(|(idx, x)| (x, 2 * idx))
+            .collect();
+        let y_remap: HashMap<_, _> = coordinates
             .iter()
             .map(|c| c.y)
             .sorted()
             .unique()
             .enumerate()
-            .for_each(|(idx, y)| {
-                y_remap.insert(y, 2 * idx);
-            });
+            .map(|(idx, y)| (y, 2 * idx))
+            .collect();
 
         let max_y = *y_remap.values().max().expect("at least one y");
         let max_x = *x_remap.values().max().expect("at least one x");
@@ -152,46 +147,26 @@ impl CompressedGrid {
     }
 }
 
+// Similar to above, the indexing here gets quite verbose. As long as compressed was constructed
+// with both a and b these gets will not panic
+#[allow(clippy::indexing_slicing)]
 fn valid_corners(a: &Coordinate, b: &Coordinate, compressed: &CompressedGrid) -> bool {
     let (min_x, max_x) = (a.x.min(b.x), a.x.max(b.x));
     let (min_y, max_y) = (a.y.min(b.y), a.y.max(b.y));
+    let (min_x_remap, max_x_remap) = (compressed.x_remap[&min_x], compressed.x_remap[&max_x]);
+    let (min_y_remap, max_y_remap) = (compressed.y_remap[&min_y], compressed.y_remap[&max_y]);
 
-    let (min_x_remap, max_x_remap) = (
-        *compressed
-            .x_remap
-            .get(&min_x)
-            .expect("succeed by construction of compressed"),
-        *compressed
-            .x_remap
-            .get(&max_x)
-            .expect("succeed by construction of compressed"),
-    );
-    let (min_y_remap, max_y_remap) = (
-        *compressed
-            .y_remap
-            .get(&min_y)
-            .expect("succeed by construction of compressed"),
-        *compressed
-            .y_remap
-            .get(&max_y)
-            .expect("succeed by construction of compressed"),
-    );
-
-    for row in compressed
+    !compressed
         .grid
         .iter()
         .take(max_y_remap + 1)
         .skip(min_y_remap)
-    {
-        for cell in row.iter().take(max_x_remap + 1).skip(min_x_remap) {
-            match cell {
-                '.' => return false,
-                _ => continue,
-            }
-        }
-    }
-
-    true
+        .any(|row| {
+            row.iter()
+                .take(max_x_remap + 1)
+                .skip(min_x_remap)
+                .any(|&cell| cell == '.')
+        })
 }
 
 fn part2(coordinates: &[Coordinate]) -> Result<u64> {
