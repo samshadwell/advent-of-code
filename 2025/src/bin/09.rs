@@ -4,7 +4,6 @@ use const_format::concatcp;
 use itertools::Itertools;
 use regex::Regex;
 use std::collections::HashMap;
-use std::fmt;
 use std::io::{BufRead, BufReader};
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -60,32 +59,6 @@ struct CompressedGrid {
     grid: Vec<Vec<char>>,
 }
 
-impl fmt::Debug for CompressedGrid {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // A helper wrapper to handle the specific formatting of the visual grid
-        struct GridView<'a>(&'a Vec<Vec<char>>);
-
-        impl<'a> fmt::Debug for GridView<'a> {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                // Start with a newline so the grid starts on its own block
-                writeln!(f)?;
-                for row in self.0 {
-                    // Collect the char Vec into a String for easy printing
-                    let row_str: String = row.iter().collect();
-                    writeln!(f, "    {}", row_str)?;
-                }
-                Ok(())
-            }
-        }
-
-        f.debug_struct("CompressedGrid")
-            .field("x_remap", &self.x_remap)
-            .field("y_remap", &self.y_remap)
-            // Wrap the grid in our helper to trigger the custom formatting
-            .field("grid", &GridView(&self.grid))
-            .finish()
-    }
-}
 impl CompressedGrid {
     // We do a bunch of indexing which will succeed by construction. Using `.get(..).expect` gets very verbose
     #[allow(clippy::indexing_slicing)]
@@ -204,15 +177,14 @@ fn valid_corners(a: &Coordinate, b: &Coordinate, compressed: &CompressedGrid) ->
             .expect("succeed by construction of compressed"),
     );
 
-    for y in min_y_remap..=max_y_remap {
-        for x in min_x_remap..=max_x_remap {
-            match compressed
-                .grid
-                .get(y)
-                .expect("by construction")
-                .get(x)
-                .expect("by construction")
-            {
+    for row in compressed
+        .grid
+        .iter()
+        .take(max_y_remap + 1)
+        .skip(min_y_remap)
+    {
+        for cell in row.iter().take(max_x_remap + 1).skip(min_x_remap) {
+            match cell {
                 '.' => return false,
                 _ => continue,
             }
