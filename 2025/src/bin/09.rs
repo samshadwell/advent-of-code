@@ -87,6 +87,8 @@ impl fmt::Debug for CompressedGrid {
     }
 }
 impl CompressedGrid {
+    // We do a bunch of indexing which will succeed by construction. Using `.get(..).expect` gets very verbose
+    #[allow(clippy::indexing_slicing)]
     fn new(coordinates: &[Coordinate]) -> Self {
         if coordinates.is_empty() {
             return Self::default();
@@ -124,55 +126,44 @@ impl CompressedGrid {
 
         // Add the vertices
         for c in coordinates {
-            let (mapped_x, mapped_y) = (
-                *x_remap.get(&c.x).expect("by construction"),
-                *y_remap.get(&c.y).expect("by construction"),
-            );
-            println!("filling ({},{})", mapped_x, mapped_y);
-            let loc = grid
-                .get_mut(mapped_y)
-                .expect("by construction")
-                .get_mut(mapped_x)
-                .expect("by construction");
-            *loc = '#';
+            let (mapped_x, mapped_y) = (x_remap[&c.x], y_remap[&c.y]);
+            grid[mapped_y][mapped_x] = '#';
         }
 
         // Connect adjacent corners
         for (c1, c2) in coordinates.iter().circular_tuple_windows() {
             if c1.x == c2.x {
-                let x = *x_remap.get(&c1.x).expect("by construction");
-                let (y1, y2) = (
-                    y_remap.get(&c1.y).expect("by construction"),
-                    y_remap.get(&c2.y).expect("by construction"),
-                );
-                let (min_y, max_y) = (*y1.min(y2), *y1.max(y2));
+                let x = x_remap[&c1.x];
+                let (y1, y2) = (y_remap[&c1.y], y_remap[&c2.y]);
+                let (min_y, max_y) = (y1.min(y2), y1.max(y2));
+                // I find the range-based looping easier to read than getting rows/indexing into them
+                #[allow(clippy::needless_range_loop)]
                 for y in min_y + 1..max_y {
                     grid[y][x] = 'X';
                 }
             } else {
-                let y = *y_remap.get(&c1.y).expect("by construction");
-                let (x1, x2) = (
-                    x_remap.get(&c1.x).expect("by construction"),
-                    x_remap.get(&c2.x).expect("by construction"),
-                );
-                let (min_x, max_x) = (*x1.min(x2), *x1.max(x2));
-                for x in min_x + 1..max_x {
-                    grid[y][x] = 'X';
+                let y = y_remap[&c1.y];
+                let (x1, x2) = (x_remap[&c1.x], x_remap[&c2.x]);
+                let (min_x, max_x) = (x1.min(x2), x1.max(x2));
+
+                let row = grid.get_mut(y).expect("row exists by construction");
+                for cell in row.iter_mut().take(max_x).skip(min_x + 1) {
+                    *cell = 'X';
                 }
             }
         }
 
         // Fill in the rest
-        for y in 0..max_y + 1 {
+        for row in grid.iter_mut() {
             let mut fill = false;
-            for x in 0..max_x + 1 {
-                match grid[y][x] {
+            for cell in row.iter_mut() {
+                match cell {
                     'X' | '#' => {
                         fill = !fill;
                     }
                     '.' => {
                         if fill {
-                            grid[y][x] = 'X';
+                            *cell = 'X';
                         }
                     }
                     _ => unreachable!("no other chars in grid"),
@@ -180,11 +171,11 @@ impl CompressedGrid {
             }
         }
 
-        dbg!(Self {
+        Self {
             x_remap,
             y_remap,
             grid,
-        })
+        }
     }
 }
 
@@ -192,19 +183,43 @@ fn valid_corners(a: &Coordinate, b: &Coordinate, compressed: &CompressedGrid) ->
     let (min_x, max_x) = (a.x.min(b.x), a.x.max(b.x));
     let (min_y, max_y) = (a.y.min(b.y), a.y.max(b.y));
 
-    let (min_x_remap, max_x_remap) = (compressed.x_remap[&min_x], compressed.x_remap[&max_x]);
-    let (min_y_remap, max_y_remap) = (compressed.y_remap[&min_y], compressed.y_remap[&max_y]);
+    let (min_x_remap, max_x_remap) = (
+        *compressed
+            .x_remap
+            .get(&min_x)
+            .expect("succeed by construction of compressed"),
+        *compressed
+            .x_remap
+            .get(&max_x)
+            .expect("succeed by construction of compressed"),
+    );
+    let (min_y_remap, max_y_remap) = (
+        *compressed
+            .y_remap
+            .get(&min_y)
+            .expect("succeed by construction of compressed"),
+        *compressed
+            .y_remap
+            .get(&max_y)
+            .expect("succeed by construction of compressed"),
+    );
 
     for y in min_y_remap..=max_y_remap {
         for x in min_x_remap..=max_x_remap {
-            match compressed.grid[y][x] {
+            match compressed
+                .grid
+                .get(y)
+                .expect("by construction")
+                .get(x)
+                .expect("by construction")
+            {
                 '.' => return false,
                 _ => continue,
             }
         }
     }
 
-    return true;
+    true
 }
 
 fn part2(coordinates: &[Coordinate]) -> Result<u64> {
