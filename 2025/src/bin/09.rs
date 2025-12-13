@@ -42,8 +42,7 @@ fn enclosed_area(a: &Coordinate, b: &Coordinate) -> u64 {
     (a.x.abs_diff(b.x) + 1) * (a.y.abs_diff(b.y) + 1)
 }
 
-fn part1<R: BufRead>(reader: R) -> Result<u64> {
-    let coordinates = parse_coordinates(reader)?;
+fn part1(coordinates: &[Coordinate]) -> Result<u64> {
     coordinates
         .iter()
         .tuple_combinations()
@@ -85,32 +84,33 @@ fn valid_corners(coordinates: &[Coordinate], a: &Coordinate, b: &Coordinate) -> 
         })
 }
 
-fn part2<R: BufRead>(reader: R) -> Result<u64> {
-    let coordinates = parse_coordinates(reader)?;
+fn part2(coordinates: &[Coordinate]) -> Result<u64> {
     coordinates
         .iter()
         .tuple_combinations()
-        .filter_map(|(a, b)| valid_corners(&coordinates, a, b).then_some(enclosed_area(a, b)))
+        .filter_map(|(a, b)| valid_corners(coordinates, a, b).then_some(enclosed_area(a, b)))
         .max()
         .ok_or_else(|| anyhow!("no suitable rectangle exists"))
 }
 
 fn main() -> Result<()> {
-    let input = std::fs::read(INPUT_FILE)?;
     start_day(DAY);
+    println!("=== Parsing input ===");
+    let parse_time = Instant::now();
+    let file = std::fs::read(INPUT_FILE)?;
+    let input = parse_coordinates(BufReader::new(file.as_slice()))?;
+    println!("Parsing time = {:.2?}\n", parse_time.elapsed());
 
     println!("=== Part 1 ===");
     let p1_time = Instant::now();
-    let input_file = BufReader::new(input.as_slice());
-    let result = part1(input_file)?;
+    let result = part1(&input)?;
     let p1_elapsed = p1_time.elapsed();
     println!("Result = {}", result);
     println!("Elapsed = {:.2?}", p1_elapsed);
 
     println!("\n=== Part 2 ===");
     let p2_time = Instant::now();
-    let input_file = BufReader::new(input.as_slice());
-    let result = part2(input_file)?;
+    let result = part2(&input)?;
     let p2_elapsed = p2_time.elapsed();
     println!("Result = {}", result);
     println!("Elapsed = {:.2?}", p2_elapsed);
@@ -134,16 +134,31 @@ mod tests {
 ";
 
     #[test]
+    fn parse_coordinates() {
+        let result = super::parse_coordinates(BufReader::new(TEST.as_bytes()));
+        assert!(result.is_ok());
+        let input = result.unwrap();
+        assert_eq!(8, input.len());
+    }
+
+    #[test]
     fn part_1() {
         let expected = 50;
-        let result = part1(BufReader::new(TEST.as_bytes()));
+        let input =
+            super::parse_coordinates(BufReader::new(TEST.as_bytes())).expect("parse succeeds");
+        let result = part1(&input);
         assert_eq!(result.unwrap(), expected)
     }
 
     #[test]
     fn part_2() {
         let expected = 24;
-        let result = part2(BufReader::new(TEST.as_bytes()));
+        let input =
+            super::parse_coordinates(BufReader::new(TEST.as_bytes())).expect("parse succeeds");
+        let result = part2(&input);
         assert_eq!(result.unwrap(), expected)
     }
+
+    #[test]
+    fn large_empty() {}
 }
