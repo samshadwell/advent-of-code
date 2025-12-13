@@ -3,6 +3,7 @@ use anyhow::{Context, Result, anyhow};
 use const_format::concatcp;
 use itertools::Itertools;
 use regex::Regex;
+use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -42,8 +43,7 @@ fn enclosed_area(a: &Coordinate, b: &Coordinate) -> u64 {
     (a.x.abs_diff(b.x) + 1) * (a.y.abs_diff(b.y) + 1)
 }
 
-fn part1<R: BufRead>(reader: R) -> Result<u64> {
-    let coordinates = parse_coordinates(reader)?;
+fn part1(coordinates: &[Coordinate]) -> Result<u64> {
     coordinates
         .iter()
         .tuple_combinations()
@@ -52,65 +52,152 @@ fn part1<R: BufRead>(reader: R) -> Result<u64> {
         .ok_or_else(|| anyhow!("no max exists, not enough elements given"))
 }
 
-fn valid_corners(coordinates: &[Coordinate], a: &Coordinate, b: &Coordinate) -> bool {
+#[derive(Default)]
+struct CompressedGrid {
+    x_remap: HashMap<u64, usize>,
+    y_remap: HashMap<u64, usize>,
+    grid: Vec<Vec<char>>,
+}
+
+impl CompressedGrid {
+    // We do a bunch of indexing which will succeed by construction. Using `.get(..).expect` gets very verbose
+    #[allow(clippy::indexing_slicing)]
+    fn new(coordinates: &[Coordinate]) -> Self {
+        if coordinates.is_empty() {
+            return Self::default();
+        }
+
+        // Compress coordinates. Leave space in between so we can distinguish
+        // #.#      ##
+        // ...  and ##
+        // #.#
+        let x_remap: HashMap<_, _> = coordinates
+            .iter()
+            .map(|c| c.x)
+            .sorted()
+            .unique()
+            .enumerate()
+            .map(|(idx, x)| (x, 2 * idx))
+            .collect();
+        let y_remap: HashMap<_, _> = coordinates
+            .iter()
+            .map(|c| c.y)
+            .sorted()
+            .unique()
+            .enumerate()
+            .map(|(idx, y)| (y, 2 * idx))
+            .collect();
+
+        let max_y = *y_remap.values().max().expect("at least one y");
+        let max_x = *x_remap.values().max().expect("at least one x");
+        let mut grid = vec![vec!['.'; max_x + 1]; max_y + 1];
+
+        // Add the vertices
+        for c in coordinates {
+            let (mapped_x, mapped_y) = (x_remap[&c.x], y_remap[&c.y]);
+            grid[mapped_y][mapped_x] = '#';
+        }
+
+        // Connect adjacent corners
+        for (c1, c2) in coordinates.iter().circular_tuple_windows() {
+            if c1.x == c2.x {
+                let x = x_remap[&c1.x];
+                let (y1, y2) = (y_remap[&c1.y], y_remap[&c2.y]);
+                let (min_y, max_y) = (y1.min(y2), y1.max(y2));
+                // I find the range-based looping easier to read than getting rows/indexing into them
+                #[allow(clippy::needless_range_loop)]
+                for y in min_y + 1..max_y {
+                    grid[y][x] = 'X';
+                }
+            } else {
+                let y = y_remap[&c1.y];
+                let (x1, x2) = (x_remap[&c1.x], x_remap[&c2.x]);
+                let (min_x, max_x) = (x1.min(x2), x1.max(x2));
+
+                let row = grid.get_mut(y).expect("row exists by construction");
+                for cell in row.iter_mut().take(max_x).skip(min_x + 1) {
+                    *cell = 'X';
+                }
+            }
+        }
+
+        // Fill in the rest
+        for row in grid.iter_mut() {
+            let mut fill = false;
+            for cell in row.iter_mut() {
+                match cell {
+                    'X' | '#' => {
+                        fill = !fill;
+                    }
+                    '.' => {
+                        if fill {
+                            *cell = 'X';
+                        }
+                    }
+                    _ => unreachable!("no other chars in grid"),
+                }
+            }
+        }
+
+        Self {
+            x_remap,
+            y_remap,
+            grid,
+        }
+    }
+}
+
+// Similar to above, the indexing here gets quite verbose. As long as compressed was constructed
+// with both a and b these gets will not panic
+#[allow(clippy::indexing_slicing)]
+fn valid_corners(a: &Coordinate, b: &Coordinate, compressed: &CompressedGrid) -> bool {
     let (min_x, max_x) = (a.x.min(b.x), a.x.max(b.x));
     let (min_y, max_y) = (a.y.min(b.y), a.y.max(b.y));
+    let (min_x_remap, max_x_remap) = (compressed.x_remap[&min_x], compressed.x_remap[&max_x]);
+    let (min_y_remap, max_y_remap) = (compressed.y_remap[&min_y], compressed.y_remap[&max_y]);
 
-    // No vertices are strictly within bounding box AND
-    !coordinates
+    !compressed
+        .grid
         .iter()
-        .any(|c| c.x > min_x && c.x < max_x && c.y > min_y && c.y < max_y) &&
-    // No edges span the bounding box
-    !coordinates
-        .iter()
-        .circular_tuple_windows()
-        .any(|(first, second)| {
-            // Note: we know these points share either an x or y in the input
-            let same_x = first.x == second.x;
-            if same_x {
-                let edge_x = first.x;
-                // True if a vertical line spanning bounding box
-                edge_x > min_x
-                    && edge_x < max_x
-                    && first.y.min(second.y) <= min_y
-                    && first.y.max(second.y) >= max_y
-            } else {
-                let edge_y = first.y;
-                // True if horizontal line spanning bounding box
-                edge_y > a.y.min(b.y)
-                    && edge_y < a.y.max(b.y)
-                    && first.x.min(second.x) <= a.x.min(b.x)
-                    && first.x.max(second.x) >= a.x.max(b.x)
-            }
+        .take(max_y_remap + 1)
+        .skip(min_y_remap)
+        .any(|row| {
+            row.iter()
+                .take(max_x_remap + 1)
+                .skip(min_x_remap)
+                .any(|&cell| cell == '.')
         })
 }
 
-fn part2<R: BufRead>(reader: R) -> Result<u64> {
-    let coordinates = parse_coordinates(reader)?;
+fn part2(coordinates: &[Coordinate]) -> Result<u64> {
+    let compressed = CompressedGrid::new(coordinates);
+
     coordinates
         .iter()
         .tuple_combinations()
-        .filter_map(|(a, b)| valid_corners(&coordinates, a, b).then_some(enclosed_area(a, b)))
+        .filter_map(|(a, b)| valid_corners(a, b, &compressed).then_some(enclosed_area(a, b)))
         .max()
         .ok_or_else(|| anyhow!("no suitable rectangle exists"))
 }
 
 fn main() -> Result<()> {
-    let input = std::fs::read(INPUT_FILE)?;
     start_day(DAY);
+    println!("=== Parsing input ===");
+    let parse_time = Instant::now();
+    let file = std::fs::read(INPUT_FILE)?;
+    let input = parse_coordinates(BufReader::new(file.as_slice()))?;
+    println!("Parsing time = {:.2?}\n", parse_time.elapsed());
 
     println!("=== Part 1 ===");
     let p1_time = Instant::now();
-    let input_file = BufReader::new(input.as_slice());
-    let result = part1(input_file)?;
+    let result = part1(&input)?;
     let p1_elapsed = p1_time.elapsed();
     println!("Result = {}", result);
     println!("Elapsed = {:.2?}", p1_elapsed);
 
     println!("\n=== Part 2 ===");
     let p2_time = Instant::now();
-    let input_file = BufReader::new(input.as_slice());
-    let result = part2(input_file)?;
+    let result = part2(&input)?;
     let p2_elapsed = p2_time.elapsed();
     println!("Result = {}", result);
     println!("Elapsed = {:.2?}", p2_elapsed);
@@ -134,16 +221,49 @@ mod tests {
 ";
 
     #[test]
+    fn parse_coordinates() {
+        let result = super::parse_coordinates(BufReader::new(TEST.as_bytes()));
+        assert!(result.is_ok());
+        let input = result.unwrap();
+        assert_eq!(8, input.len());
+    }
+
+    #[test]
     fn part_1() {
         let expected = 50;
-        let result = part1(BufReader::new(TEST.as_bytes()));
+        let input =
+            super::parse_coordinates(BufReader::new(TEST.as_bytes())).expect("parse succeeds");
+        let result = part1(&input);
         assert_eq!(result.unwrap(), expected)
     }
 
     #[test]
     fn part_2() {
         let expected = 24;
-        let result = part2(BufReader::new(TEST.as_bytes()));
+        let input =
+            super::parse_coordinates(BufReader::new(TEST.as_bytes())).expect("parse succeeds");
+        let result = part2(&input);
         assert_eq!(result.unwrap(), expected)
+    }
+
+    #[test]
+    fn large_empty() {
+        // Square with a big hole in the middle
+        let coordinates = vec![
+            Coordinate { x: 0, y: 0 },
+            Coordinate { x: 8, y: 0 },
+            Coordinate { x: 8, y: 8 },
+            Coordinate { x: 0, y: 8 },
+            Coordinate { x: 0, y: 5 },
+            Coordinate { x: 1, y: 5 },
+            Coordinate { x: 1, y: 7 },
+            Coordinate { x: 7, y: 7 },
+            Coordinate { x: 7, y: 1 },
+            Coordinate { x: 1, y: 1 },
+            Coordinate { x: 1, y: 4 },
+            Coordinate { x: 0, y: 4 },
+        ];
+        let result = part2(&coordinates);
+        assert_eq!(result.unwrap(), 16)
     }
 }
