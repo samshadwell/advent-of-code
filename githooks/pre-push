@@ -1,4 +1,4 @@
 #!/bin/bash
 set -e
 
-mise '//2025:check'
+mise '//2015:check'

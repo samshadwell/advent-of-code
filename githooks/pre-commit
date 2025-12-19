@@ -1,4 +1,4 @@
 #!/bin/bash
 set -e
 
-mise '//2025:format-check'
+mise '//2015:format-check'
