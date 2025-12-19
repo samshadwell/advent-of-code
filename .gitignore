@@ -1,4 +1,6 @@
+# Rust stuff
+*/target
+*/input/*.txt
+
 2024/**/input.txt
 2024/**/main
-2025/target
-2025/input/*.txt
