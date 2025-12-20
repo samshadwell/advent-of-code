@@ -30,8 +30,8 @@ fn main() -> Result<()> {
 
     println!("=== Parsing input ===");
     let parse_time = Instant::now();
-    let file = std::fs::read(INPUT_FILE)?;
-    let input = parse(BufReader::new(file.as_slice()))?;
+    let file = std::fs::File::open(INPUT_FILE)?;
+    let input = parse(BufReader::new(file))?;
     println!("Parsing time = {:.2?}\n", parse_time.elapsed());
 
     println!("=== Part 1 ===");
