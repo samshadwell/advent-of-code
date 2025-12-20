@@ -21,8 +21,11 @@ struct Dimensions {
 
 impl Dimensions {
     fn required_paper(&self) -> usize {
-        let min_size = (self.l * self.w).min(self.l * self.h).min(self.w * self.h);
-        2 * self.l * self.w + 2 * self.w * self.h + 2 * self.h * self.l + min_size
+        let side1 = self.l * self.w;
+        let side2 = self.l * self.h;
+        let side3 = self.w * self.h;
+        let min_size = side1.min(side2).min(side3);
+        2 * (side1 + side2 + side3) + min_size
     }
 
     fn required_ribbon(&self) -> usize {
@@ -47,9 +50,13 @@ impl FromStr for Dimensions {
             .parse(remaining)
             .finish()
             .map_err(|_: nom::error::Error<&str>| anyhow!("width parse error"))?;
-        let (_, h) = usize(remaining)
+        let (remaining, h) = usize(remaining)
             .finish()
             .map_err(|_: nom::error::Error<&str>| anyhow!("height parse error"))?;
+
+        if !remaining.is_empty() {
+            return Err(anyhow!("trailing characters in input: {}", remaining));
+        }
 
         Ok(Dimensions { l, w, h })
     }
@@ -72,8 +79,8 @@ fn main() -> Result<()> {
 
     println!("=== Parsing input ===");
     let parse_time = Instant::now();
-    let file = std::fs::read(INPUT_FILE)?;
-    let input = parse(BufReader::new(file.as_slice()))?;
+    let file = std::fs::File::open(INPUT_FILE)?;
+    let input = parse(BufReader::new(file))?;
     println!("Parsing time = {:.2?}\n", parse_time.elapsed());
 
     println!("=== Part 1 ===");
