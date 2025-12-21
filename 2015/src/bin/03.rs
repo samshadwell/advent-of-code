@@ -18,27 +18,26 @@ fn do_move(curr: (i32, i32), dir: char) -> Result<(i32, i32)> {
 }
 
 fn part1(input: &str) -> Result<usize> {
-    let mut seen = HashSet::new();
-    let mut curr = (0, 0);
-    seen.insert(curr);
-    for c in input.chars() {
-        curr = do_move(curr, c)?;
-        seen.insert(curr);
-    }
+    let mut seen = HashSet::from([(0, 0)]);
+    input.chars().try_fold((0, 0), |pos, c| {
+        let new = do_move(pos, c)?;
+        seen.insert(new);
+        anyhow::Ok(new)
+    })?;
     Ok(seen.len())
 }
 
 fn part2(input: &str) -> Result<usize> {
-    let mut seen = HashSet::new();
-    let mut positions = [(0, 0), (0, 0)];
-    seen.insert((0, 0));
-    for (idx, c) in input.chars().enumerate() {
-        let which = idx % 2;
-        let curr = positions[which];
-        let new = do_move(curr, c)?;
-        seen.insert(new);
-        positions[which] = new;
-    }
+    let mut seen = HashSet::from([(0, 0)]);
+    input
+        .chars()
+        .enumerate()
+        .try_fold([(0, 0); 2], |mut positions, (idx, c)| {
+            let which = idx % 2;
+            positions[which] = do_move(positions[which], c)?;
+            seen.insert(positions[which]);
+            anyhow::Ok(positions)
+        })?;
 
     Ok(seen.len())
 }
