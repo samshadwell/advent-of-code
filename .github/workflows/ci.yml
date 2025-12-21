@@ -17,7 +17,7 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2.8.2
         with:
-          workspaces: "2025"
+          workspaces: "2015"
       - run: mise run '//2015:check'
   check-2024:
     name: "2024 - check"
