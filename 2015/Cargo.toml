@@ -6,4 +6,5 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.100"
 const_format = "0.2.35"
+md5 = "0.8.0"
 nom = "8.0.0"
