@@ -2,6 +2,8 @@ use adv_code_2015::start_day;
 use anyhow::{Context, Result, anyhow};
 use const_format::concatcp;
 use md5::Digest;
+use rayon::prelude::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+use std::fmt::Write;
 use std::io::{BufRead, BufReader};
 use std::time::Instant;
 
@@ -10,20 +12,42 @@ const INPUT_FILE: &str = concatcp!("input/", DAY, ".txt");
 
 fn parse<R: BufRead>(reader: &mut R) -> Result<String> {
     let mut buf = String::new();
-    let bytes_read = reader.read_line(&mut buf).context("reading line")?;
-    if bytes_read <= 1 {
-        return Err(anyhow!("failed to read any bytes of input"));
-    }
-    let trimmed = buf.trim_end().to_owned();
-    if trimmed.is_empty() {
+    reader.read_line(&mut buf).context("reading line")?;
+    buf.truncate(buf.trim_end().len());
+    if buf.is_empty() {
         return Err(anyhow!("found empty key"));
     }
-    Ok(trimmed)
+    Ok(buf)
 }
 
-fn find_first_collision(key: &str, max: usize, pred: fn(hash: Digest) -> bool) -> Result<usize> {
-    (0..=max)
-        .find(|curr| pred(md5::compute(format!("{}{}", key, curr))))
+fn find_first_collision(
+    key: &str,
+    max: usize,
+    pred: impl Fn(Digest) -> bool + Send + Sync,
+) -> Result<usize> {
+    let max_digits = format!("{}", max).len();
+
+    (0..max)
+        .into_par_iter()
+        .by_exponential_blocks()
+        .map_init(
+            || {
+                let mut s = String::with_capacity(key.len() + max_digits);
+                s.push_str(key);
+                s
+            },
+            |s, i| {
+                s.truncate(key.len());
+                write!(s, "{}", i).expect("write to string always succeeds");
+                if pred(md5::compute(&s)) {
+                    Some(i)
+                } else {
+                    None
+                }
+            },
+        )
+        .find_first(|&res| res.is_some())
+        .flatten()
         .ok_or_else(|| anyhow!("no collision found between 0 and {}", max))
 }
 
@@ -77,8 +101,6 @@ hello-there
         assert_eq!("hello-there", result.unwrap())
     }
 
-    // This test takes annoyingly long, but does pass
-    #[ignore]
     #[test]
     fn part_1() {
         assert_eq!(609_043, part1("abcdef", 1_000_000).unwrap());
