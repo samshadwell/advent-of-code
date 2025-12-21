@@ -20,7 +20,7 @@ fn part1_nice(s: &str) -> bool {
         .bytes()
         .filter(|&c| matches!(c, b'a' | b'e' | b'i' | b'o' | b'u'))
         .count();
-    let has_repeats = s.chars().tuple_windows().any(|(a, b)| a == b);
+    let has_repeats = s.bytes().tuple_windows().any(|(a, b)| a == b);
     let has_forbidden = s.bytes().tuple_windows().any(|tup| {
         matches!(
             tup,
