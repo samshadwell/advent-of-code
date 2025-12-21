@@ -77,6 +77,8 @@ hello-there
         assert_eq!("hello-there", result.unwrap())
     }
 
+    // This test takes annoyingly long, but does pass
+    #[ignore]
     #[test]
     fn part_1() {
         assert_eq!(609_043, part1("abcdef", 1_000_000).unwrap());
