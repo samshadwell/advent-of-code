@@ -11,18 +11,21 @@ const INPUT_FILE: &str = concatcp!("input/", DAY, ".txt");
 type Input = i32;
 
 // TODO implement
+#[allow(clippy::unnecessary_wraps, clippy::missing_const_for_fn)]
 fn parse<R: BufRead>(_reader: R) -> Result<Input> {
     Ok(0)
 }
 
 // TODO: Change result type and implement
-fn part1(_input: Input) -> Result<i32> {
-    Ok(0)
+#[allow(clippy::missing_const_for_fn)]
+fn part1(_input: Input) -> i32 {
+    0
 }
 
 // TODO: Change result type and implement
-fn part2(_input: Input) -> Result<i32> {
-    Ok(0)
+#[allow(clippy::missing_const_for_fn)]
+fn part2(_input: Input) -> i32 {
+    0
 }
 
 fn main() -> Result<()> {
@@ -36,14 +39,14 @@ fn main() -> Result<()> {
 
     println!("=== Part 1 ===");
     let p1_time = Instant::now();
-    let result = part1(input)?;
-    println!("Result = {}", result);
+    let result = part1(input);
+    println!("Result = {result}");
     println!("Elapsed = {:.2?}", p1_time.elapsed());
 
     println!("\n=== Part 2 ===");
     let p2_time = Instant::now();
-    let result = part2(input)?;
-    println!("Result = {}", result);
+    let result = part2(input);
+    println!("Result = {result}");
     println!("Elapsed = {:.2?}", p2_time.elapsed());
 
     Ok(())
@@ -69,7 +72,7 @@ mod tests {
         let expected = 0;
         let input = super::parse(BufReader::new(TEST.as_bytes())).expect("parse succeeds");
         let result = part1(input);
-        assert_eq!(result.unwrap(), expected)
+        assert_eq!(result, expected)
     }
 
     #[test]
@@ -78,6 +81,6 @@ mod tests {
         let expected = 0;
         let input = super::parse(BufReader::new(TEST.as_bytes())).expect("parse succeeds");
         let result = part2(input);
-        assert_eq!(result.unwrap(), expected)
+        assert_eq!(result, expected)
     }
 }

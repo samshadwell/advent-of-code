@@ -25,7 +25,7 @@ fn find_first_collision(
     max: usize,
     pred: impl Fn(Digest) -> bool + Send + Sync,
 ) -> Result<usize> {
-    let max_digits = format!("{}", max).len();
+    let max_digits = format!("{max}").len();
 
     (0..max)
         .into_par_iter()
@@ -38,7 +38,7 @@ fn find_first_collision(
             },
             |s, i| {
                 s.truncate(key.len());
-                write!(s, "{}", i).expect("write to string always succeeds");
+                write!(s, "{i}").expect("write to string always succeeds");
                 if pred(md5::compute(&s)) {
                     Some(i)
                 } else {
@@ -48,18 +48,20 @@ fn find_first_collision(
         )
         .find_first(|&res| res.is_some())
         .flatten()
-        .ok_or_else(|| anyhow!("no collision found between 0 and {}", max))
+        .ok_or_else(|| anyhow!("no collision found between 0 and {max}"))
 }
 
 fn part1(input: &str, max: usize) -> Result<usize> {
     find_first_collision(input, max, |hash| {
-        hash[0] == 0 && hash[1] == 0 && hash[2] < 0x10
+        hash.first() == Some(&0)
+            && hash.get(1) == Some(&0)
+            && hash.get(2).is_some_and(|&x| x < 0x10)
     })
 }
 
 fn part2(input: &str, max: usize) -> Result<usize> {
     find_first_collision(input, max, |hash| {
-        hash[0] == 0 && hash[1] == 0 && hash[2] == 0
+        hash.first() == Some(&0) && hash.get(1) == Some(&0) && hash.get(2) == Some(&0)
     })
 }
 
@@ -75,13 +77,13 @@ fn main() -> Result<()> {
     println!("=== Part 1 ===");
     let p1_time = Instant::now();
     let result = part1(&input, usize::MAX)?;
-    println!("Result = {}", result);
+    println!("Result = {result}");
     println!("Elapsed = {:.2?}", p1_time.elapsed());
 
     println!("\n=== Part 2 ===");
     let p2_time = Instant::now();
     let result = part2(&input, usize::MAX)?;
-    println!("Result = {}", result);
+    println!("Result = {result}");
     println!("Elapsed = {:.2?}", p2_time.elapsed());
 
     Ok(())

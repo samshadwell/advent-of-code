@@ -13,7 +13,7 @@ fn do_move(curr: (i32, i32), dir: char) -> Result<(i32, i32)> {
         '>' => Ok((curr.0 + 1, curr.1)),
         '^' => Ok((curr.0, curr.1 - 1)),
         'v' => Ok((curr.0, curr.1 + 1)),
-        _ => Err(anyhow!("unknown direction: {}", dir)),
+        _ => Err(anyhow!("unknown direction: {dir}")),
     }
 }
 
@@ -34,8 +34,11 @@ fn part2(input: &str) -> Result<usize> {
         .enumerate()
         .try_fold([(0, 0); 2], |mut positions, (idx, c)| {
             let which = idx % 2;
-            positions[which] = do_move(positions[which], c)?;
-            seen.insert(positions[which]);
+            let pos = positions
+                .get_mut(which)
+                .ok_or_else(|| anyhow!("index out of bounds"))?;
+            *pos = do_move(*pos, c)?;
+            seen.insert(*pos);
             anyhow::Ok(positions)
         })?;
 
@@ -53,13 +56,13 @@ fn main() -> Result<()> {
     println!("=== Part 1 ===");
     let p1_time = Instant::now();
     let result = part1(&input)?;
-    println!("Result = {}", result);
+    println!("Result = {result}");
     println!("Elapsed = {:.2?}", p1_time.elapsed());
 
     println!("\n=== Part 2 ===");
     let p2_time = Instant::now();
     let result = part2(&input)?;
-    println!("Result = {}", result);
+    println!("Result = {result}");
     println!("Elapsed = {:.2?}", p2_time.elapsed());
 
     Ok(())
