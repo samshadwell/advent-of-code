@@ -31,7 +31,7 @@ impl Dimensions {
     fn required_ribbon(&self) -> usize {
         let bow_ribbon = self.l * self.w * self.h;
         let mut sorted = [self.l, self.w, self.h];
-        sorted.sort();
+        sorted.sort_unstable();
         let [smallest, second, _] = sorted;
 
         2 * (smallest + second) + bow_ribbon
@@ -55,10 +55,10 @@ impl FromStr for Dimensions {
             .map_err(|_: nom::error::Error<&str>| anyhow!("height parse error"))?;
 
         if !remaining.is_empty() {
-            return Err(anyhow!("trailing characters in input: {}", remaining));
+            return Err(anyhow!("trailing characters in input: {remaining}"));
         }
 
-        Ok(Dimensions { l, w, h })
+        Ok(Self { l, w, h })
     }
 }
 
@@ -86,13 +86,13 @@ fn main() -> Result<()> {
     println!("=== Part 1 ===");
     let p1_time = Instant::now();
     let result = part1(&input);
-    println!("Result = {}", result);
+    println!("Result = {result}");
     println!("Elapsed = {:.2?}", p1_time.elapsed());
 
     println!("\n=== Part 2 ===");
     let p2_time = Instant::now();
     let result = part2(&input);
-    println!("Result = {}", result);
+    println!("Result = {result}");
     println!("Elapsed = {:.2?}", p2_time.elapsed());
 
     Ok(())

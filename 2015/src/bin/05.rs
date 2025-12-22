@@ -37,10 +37,11 @@ fn part1<T: AsRef<str>>(input: &[T]) -> usize {
 
 fn part2_nice(s: &str) -> bool {
     let bytes = s.as_bytes();
-    let has_two_pair = bytes
-        .windows(2)
-        .enumerate()
-        .any(|(i, pair)| bytes[i + 2..].windows(2).any(|other| pair == other));
+    let has_two_pair = bytes.windows(2).enumerate().any(|(i, pair)| {
+        bytes
+            .get(i + 2..)
+            .is_some_and(|s| s.windows(2).any(|other| pair == other))
+    });
     let has_separated_dupe = bytes.iter().tuple_windows().any(|(a, _, b)| a == b);
 
     has_two_pair && has_separated_dupe
@@ -62,13 +63,13 @@ fn main() -> Result<()> {
     println!("=== Part 1 ===");
     let p1_time = Instant::now();
     let result = part1(input.as_slice());
-    println!("Result = {}", result);
+    println!("Result = {result}");
     println!("Elapsed = {:.2?}", p1_time.elapsed());
 
     println!("\n=== Part 2 ===");
     let p2_time = Instant::now();
     let result = part2(&input);
-    println!("Result = {}", result);
+    println!("Result = {result}");
     println!("Elapsed = {:.2?}", p2_time.elapsed());
 
     Ok(())

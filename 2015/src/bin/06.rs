@@ -62,7 +62,7 @@ fn parse_instruction(input: &str) -> Result<Instruction> {
     .parse(input)
     .finish()
     .map(|(_, i)| i)
-    .map_err(|e| anyhow!("parse error: {}", e))
+    .map_err(|e| anyhow!("parse error: {e}"))
 }
 
 fn parse<R: BufRead>(reader: R) -> Result<Vec<Instruction>> {
@@ -75,19 +75,25 @@ fn part1(instructions: &[Instruction]) -> usize {
         // Matching outside the loop lets us get ~30x better perf than matching inside
         match i.kind {
             Kind::TurnOn => {
-                for row in &mut lights[i.c1.x..=i.c2.x] {
-                    row[i.c1.y..=i.c2.y].fill(true);
+                for row in lights.get_mut(i.c1.x..=i.c2.x).into_iter().flatten() {
+                    if let Some(slice) = row.get_mut(i.c1.y..=i.c2.y) {
+                        slice.fill(true);
+                    }
                 }
             }
             Kind::TurnOff => {
-                for row in &mut lights[i.c1.x..=i.c2.x] {
-                    row[i.c1.y..=i.c2.y].fill(false);
+                for row in lights.get_mut(i.c1.x..=i.c2.x).into_iter().flatten() {
+                    if let Some(slice) = row.get_mut(i.c1.y..=i.c2.y) {
+                        slice.fill(false);
+                    }
                 }
             }
             Kind::Toggle => {
-                for row in &mut lights[i.c1.x..=i.c2.x] {
-                    for light in &mut row[i.c1.y..=i.c2.y] {
-                        *light = !*light;
+                for row in lights.get_mut(i.c1.x..=i.c2.x).into_iter().flatten() {
+                    if let Some(slice) = row.get_mut(i.c1.y..=i.c2.y) {
+                        for light in slice {
+                            *light = !*light;
+                        }
                     }
                 }
             }
@@ -105,23 +111,29 @@ fn part2(instructions: &[Instruction]) -> u64 {
         // Like above, matching outside the loop lets us get ~30x better perf
         match i.kind {
             Kind::TurnOn => {
-                for row in &mut lights[i.c1.x..=i.c2.x] {
-                    for light in &mut row[i.c1.y..=i.c2.y] {
-                        *light += 1;
+                for row in lights.get_mut(i.c1.x..=i.c2.x).into_iter().flatten() {
+                    if let Some(slice) = row.get_mut(i.c1.y..=i.c2.y) {
+                        for light in slice {
+                            *light += 1;
+                        }
                     }
                 }
             }
             Kind::TurnOff => {
-                for row in &mut lights[i.c1.x..=i.c2.x] {
-                    for light in &mut row[i.c1.y..=i.c2.y] {
-                        *light = light.saturating_sub(1);
+                for row in lights.get_mut(i.c1.x..=i.c2.x).into_iter().flatten() {
+                    if let Some(slice) = row.get_mut(i.c1.y..=i.c2.y) {
+                        for light in slice {
+                            *light = light.saturating_sub(1);
+                        }
                     }
                 }
             }
             Kind::Toggle => {
-                for row in &mut lights[i.c1.x..=i.c2.x] {
-                    for light in &mut row[i.c1.y..=i.c2.y] {
-                        *light += 2;
+                for row in lights.get_mut(i.c1.x..=i.c2.x).into_iter().flatten() {
+                    if let Some(slice) = row.get_mut(i.c1.y..=i.c2.y) {
+                        for light in slice {
+                            *light += 2;
+                        }
                     }
                 }
             }
@@ -129,7 +141,7 @@ fn part2(instructions: &[Instruction]) -> u64 {
     }
     lights
         .iter()
-        .map(|r| r.iter().map(|&v| v as u64).sum::<u64>())
+        .map(|r| r.iter().map(|&v| u64::from(v)).sum::<u64>())
         .sum()
 }
 
@@ -145,13 +157,13 @@ fn main() -> Result<()> {
     println!("=== Part 1 ===");
     let p1_time = Instant::now();
     let result = part1(&input);
-    println!("Result = {}", result);
+    println!("Result = {result}");
     println!("Elapsed = {:.2?}", p1_time.elapsed());
 
     println!("\n=== Part 2 ===");
     let p2_time = Instant::now();
     let result = part2(&input);
-    println!("Result = {}", result);
+    println!("Result = {result}");
     println!("Elapsed = {:.2?}", p2_time.elapsed());
 
     Ok(())

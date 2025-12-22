@@ -12,7 +12,7 @@ fn part1(input: &str) -> Result<i32> {
         .map(|c| match c {
             '(' => Ok(1),
             ')' => Ok(-1),
-            _ => Err(anyhow!("unknown character found: {}", c)),
+            _ => Err(anyhow!("unknown character found: {c}")),
         })
         .sum()
 }
@@ -23,7 +23,7 @@ fn part2(input: &str) -> Result<usize> {
         level += match c {
             '(' => 1,
             ')' => -1,
-            _ => return Err(anyhow!("unknown character found: {}", c)),
+            _ => return Err(anyhow!("unknown character found: {c}")),
         };
         if level < 0 {
             return Ok(idx + 1);
@@ -43,13 +43,13 @@ fn main() -> Result<()> {
     println!("=== Part 1 ===");
     let p1_time = Instant::now();
     let result = part1(&input)?;
-    println!("Result = {}", result);
+    println!("Result = {result}");
     println!("Elapsed = {:.2?}", p1_time.elapsed());
 
     println!("\n=== Part 2 ===");
     let p2_time = Instant::now();
     let result = part2(&input)?;
-    println!("Result = {}", result);
+    println!("Result = {result}");
     println!("Elapsed = {:.2?}", p2_time.elapsed());
 
     Ok(())
