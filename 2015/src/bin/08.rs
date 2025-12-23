@@ -22,33 +22,37 @@ fn unescaped_len(s: &str) -> Result<usize> {
     }
 
     let mut len = 0;
-    let mut idx = 0;
-    let bytes = s.as_bytes();
-    while idx < bytes.len() {
-        match bytes.get(idx) {
-            Some(b'"') => {} // Unescaped quote, consume and move on
-            Some(b'\\') => {
-                let next = bytes.get(idx + 1);
-                match next {
-                    Some(b'\\' | b'"') => {
-                        idx += 1;
-                        len += 1;
-                    }
-                    Some(b'x') => {
-                        // Escaped hex. Three extra chars to consume
-                        idx += 3;
-                        len += 1;
-                    }
-                    Some(c) => return Err(anyhow!("invalid escape sequence \\{c}")),
-                    None => return Err(anyhow!("unterminated escape sequence")),
-                }
-            }
-            Some(_) => len += 1,
-            None => unreachable!(),
-        }
-        idx += 1;
+    let mut iter = s.as_bytes().iter();
+    let first = iter.next();
+    if first != Some(&b'"') {
+        return Err(anyhow!("expected quoted string, found {s}"));
     }
 
+    while let Some(&byte) = iter.next() {
+        match byte {
+            b'"' => {
+                if iter.next().is_some() {
+                    return Err(anyhow!("invalid unescaped quote in middle of {s}"));
+                }
+            }
+            b'\\' => match iter.next() {
+                Some(b'\\' | b'"') => {
+                    len += 1;
+                }
+                Some(b'x') => {
+                    if !iter.next().is_some_and(nom::AsChar::is_hex_digit)
+                        || !iter.next().is_some_and(nom::AsChar::is_hex_digit)
+                    {
+                        return Err(anyhow!("malformed hex escape sequence in {s}"));
+                    }
+                    len += 1;
+                }
+                Some(c) => return Err(anyhow!("invalid escape sequence \\{} in {s}", *c as char)),
+                None => return Err(anyhow!("unterminated escape sequence in {s}")),
+            },
+            _ => len += 1,
+        }
+    }
     Ok(len)
 }
 
