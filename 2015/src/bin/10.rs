@@ -1,6 +1,7 @@
 use adv_code_2015::start_day;
 use anyhow::{Result, anyhow};
 use const_format::concatcp;
+use std::fmt::Write;
 use std::io::{BufRead, BufReader};
 use std::time::Instant;
 
@@ -11,8 +12,8 @@ fn parse<R: BufRead>(reader: R) -> Result<String> {
     reader
         .lines()
         .next()
-        .ok_or_else(|| anyhow!("expected at least one line, found none"))
-        .and_then(|l| Ok(l?))
+        .ok_or_else(|| anyhow!("expected at least one line, found none"))?
+        .map_err(anyhow::Error::from)
 }
 
 fn encode(s: &str) -> String {
@@ -24,25 +25,25 @@ fn encode(s: &str) -> String {
             len += 1;
             iter.next();
         }
-        encoded.push_str(format!("{len}{curr}").as_str());
+        write!(&mut encoded, "{len}{curr}").expect("write to string always succeeds");
     }
     encoded
 }
 
-fn part1(input: &str) -> usize {
+fn repeated_encoding_length(input: &str, k: usize) -> usize {
     let mut curr = input.to_string();
-    for _ in 0..40 {
+    for _ in 0..k {
         curr = encode(&curr);
     }
     curr.len()
 }
 
+fn part1(input: &str) -> usize {
+    repeated_encoding_length(input, 40)
+}
+
 fn part2(input: &str) -> usize {
-    let mut curr = input.to_string();
-    for _ in 0..50 {
-        curr = encode(&curr);
-    }
-    curr.len()
+    repeated_encoding_length(input, 50)
 }
 
 fn main() -> Result<()> {
@@ -80,5 +81,11 @@ mod tests {
         assert_eq!("1211", encode("21"));
         assert_eq!("111221", encode("1211"));
         assert_eq!("312211", encode("111221"));
+    }
+
+    #[test]
+    fn test_repeated_encoding_length() {
+        assert_eq!(2, repeated_encoding_length("1", 1));
+        assert_eq!(6, repeated_encoding_length("1", 5));
     }
 }
