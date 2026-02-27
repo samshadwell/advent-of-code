@@ -190,19 +190,19 @@ func (sys System) DotGraph() string {
 				t = "unknown"
 			}
 
-			sb.WriteString(fmt.Sprintf("%s [label=\"%s\n%s\"];\n", id, id, t))
+			fmt.Fprintf(&sb, "%s [label=\"%s\n%s\"];\n", id, id, t)
 		case *And:
-			sb.WriteString(fmt.Sprintf("%s [label=\"%s\nAND\"];\n", id, id))
-			sb.WriteString(fmt.Sprintf("%s -> %s;\n", v.in1, id))
-			sb.WriteString(fmt.Sprintf("%s -> %s;\n", v.in2, id))
+			fmt.Fprintf(&sb, "%s [label=\"%s\nAND\"];\n", id, id)
+			fmt.Fprintf(&sb, "%s -> %s;\n", v.in1, id)
+			fmt.Fprintf(&sb, "%s -> %s;\n", v.in2, id)
 		case *Or:
-			sb.WriteString(fmt.Sprintf("%s [label=\"%s\nOR\"];\n", id, id))
-			sb.WriteString(fmt.Sprintf("%s -> %s;\n", v.in1, id))
-			sb.WriteString(fmt.Sprintf("%s -> %s;\n", v.in2, id))
+			fmt.Fprintf(&sb, "%s [label=\"%s\nOR\"];\n", id, id)
+			fmt.Fprintf(&sb, "%s -> %s;\n", v.in1, id)
+			fmt.Fprintf(&sb, "%s -> %s;\n", v.in2, id)
 		case *Xor:
-			sb.WriteString(fmt.Sprintf("%s [label=\"%s\nXOR\"];\n", id, id))
-			sb.WriteString(fmt.Sprintf("%s -> %s;\n", v.in1, id))
-			sb.WriteString(fmt.Sprintf("%s -> %s;\n", v.in2, id))
+			fmt.Fprintf(&sb, "%s [label=\"%s\nXOR\"];\n", id, id)
+			fmt.Fprintf(&sb, "%s -> %s;\n", v.in1, id)
+			fmt.Fprintf(&sb, "%s -> %s;\n", v.in2, id)
 		}
 	}
 	sb.WriteRune('}')

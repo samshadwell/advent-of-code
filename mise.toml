@@ -1,5 +1,12 @@
 experimental_monorepo_root = true
 
+[monorepo]
+config_roots = [
+    "2015",
+    "2024",
+    "2025",
+]
+
 [tools]
 go = "latest"
 golangci-lint = "2"
