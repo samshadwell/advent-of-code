@@ -4,7 +4,6 @@
 use adv_code_2015::start_day;
 use anyhow::{Result, bail};
 use itertools::Itertools;
-use nom::AsChar;
 use std::fmt::Display;
 use std::str::FromStr;
 use std::time::Instant;
@@ -51,13 +50,25 @@ impl Password {
             return false;
         }
 
-        for c1_start in 0..=6 {
-            for c2_start in (c1_start + 2)..=6 {
-                if self.0[c1_start] == self.0[c1_start + 1]
-                    && self.0[c2_start] == self.0[c2_start + 1]
-                {
-                    return true;
+        let mut i = 0;
+        let mut first_pair_val = None;
+        while i < 7 {
+            if self.0[i] == self.0[i + 1] {
+                // Found consecutive matching values
+                let c = self.0[i];
+                match first_pair_val {
+                    None => first_pair_val = Some(c),
+                    Some(a) => {
+                        // Only counts if it's a different pair than already found
+                        if c != a {
+                            return true;
+                        }
+                    }
                 }
+                // Skip over the matched value
+                i += 2
+            } else {
+                i += 1
             }
         }
 
@@ -102,11 +113,10 @@ impl FromStr for Password {
 
 impl Display for Password {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut s = String::with_capacity(0);
-        for c in self.0 {
-            s.push((c + b'a').as_char());
+        for &c in &self.0 {
+            write!(f, "{}", (c + b'a') as char)?;
         }
-        write!(f, "{s}")
+        Ok(())
     }
 }
 
