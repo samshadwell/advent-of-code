@@ -34,22 +34,18 @@ impl Password {
         }
     }
 
-    fn is_valid(&self) -> bool {
-        let all_allowed = self.0.iter().all(|&c| char_allowed(c));
-        if !all_allowed {
-            return false;
-        }
+    fn all_valid_chars(&self) -> bool {
+        self.0.iter().all(|&c| char_allowed(c))
+    }
 
-        let has_straight = self
-            .0
+    fn has_straight(&self) -> bool {
+        self.0
             .iter()
             .tuple_windows()
-            .any(|(&a, &b, &c)| a + 1 == b && b + 1 == c);
+            .any(|(&a, &b, &c)| a + 1 == b && b + 1 == c)
+    }
 
-        if !has_straight {
-            return false;
-        }
-
+    const fn has_two_pairs(&self) -> bool {
         let mut i = 0;
         let mut first_pair_val = None;
         while i < 7 {
@@ -66,22 +62,39 @@ impl Password {
                     }
                 }
                 // Skip over the matched value
-                i += 2
+                i += 2;
             } else {
-                i += 1
+                i += 1;
             }
         }
 
         false
     }
 
+    fn is_valid(&self) -> bool {
+        self.has_straight() && self.all_valid_chars() && self.has_two_pairs()
+    }
+
     fn next_valid(&self) -> Self {
         let mut next = self.clone();
         next.incr();
-        while !next.is_valid() {
+        loop {
+            // Optimization: if it contains a forbidden char, skip ahead.
+            if let Some(i) = next.0.iter().position(|&c| !char_allowed(c)) {
+                // Note: this won't cause a carry because 'z' is a valid char
+                next.0[i] += 1;
+                for j in (i + 1)..8 {
+                    next.0[j] = 0;
+                }
+            }
+
+            if next.is_valid() {
+                return next;
+            }
+
+            // Not valid yet, so just do a simple increment.
             next.incr();
         }
-        next
     }
 }
 
