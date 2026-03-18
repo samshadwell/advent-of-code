@@ -47,65 +47,43 @@ fn parse<R: BufRead>(reader: R) -> Result<Input> {
     Ok(result)
 }
 
-fn all_guests(input: &Input) -> Vec<&str> {
-    input.keys().map(|(a, _)| a.as_str()).unique().collect()
+fn solve<F>(input: &Input, windows: F) -> Result<i32>
+where
+    // yeah idk Claude had to help me out with this type
+    F: for<'a> Fn(&'a [&&str]) -> Box<dyn Iterator<Item = (&'a &'a str, &'a &'a str)> + 'a>,
+{
+    let guests: Vec<_> = input.keys().map(|(a, _)| a.as_str()).unique().collect();
+    let score_pair = |(&a, &b): (&&str, &&str)| -> Result<i32> {
+        let ab = input
+            .get(&(a.to_string(), b.to_string()))
+            .ok_or_else(|| anyhow!("missing edge {a} -> {b}"))?;
+        let ba = input
+            .get(&(b.to_string(), a.to_string()))
+            .ok_or_else(|| anyhow!("missing edge {b} -> {a}"))?;
+        Ok(ab + ba)
+    };
+    let max = guests
+        .iter()
+        .permutations(guests.len())
+        .map(|perm| windows(&perm).map(score_pair).sum::<Result<i32>>())
+        .collect::<Result<Vec<i32>>>()?
+        .into_iter()
+        .max()
+        .unwrap_or_default();
+    Ok(max)
 }
 
 fn part1(input: &Input) -> Result<i32> {
-    let guests = all_guests(input);
-    let max = guests
-        .iter()
-        .permutations(guests.len())
-        .map(|perm| {
-            perm.iter()
-                .circular_tuple_windows()
-                .map(|(&&a, &&b)| -> Result<i32> {
-                    let ab = input
-                        .get(&(a.to_string(), b.to_string()))
-                        .ok_or_else(|| anyhow!("missing edge {a} -> {b}"))?;
-                    let ba = input
-                        .get(&(b.to_string(), a.to_string()))
-                        .ok_or_else(|| anyhow!("missing edge {b} -> {a}"))?;
-                    Ok(ab + ba)
-                })
-                .sum::<Result<i32>>()
-        })
-        .collect::<Result<Vec<i32>>>()?
-        .into_iter()
-        .max()
-        .unwrap_or_default();
-
-    Ok(max)
+    solve(input, |perm| {
+        Box::new(perm.iter().copied().circular_tuple_windows())
+    })
 }
 
 fn part2(input: &Input) -> Result<i32> {
-    let guests = all_guests(input);
-    let max = guests
-        .iter()
-        .permutations(guests.len())
-        .map(|perm| {
-            perm.iter()
-                // Note: This is the only difference between these two functions.
-                // I simulate seating myself by not evaluating the last <> first
-                // guests, implicitly seating myself between the first and last guests
-                .tuple_windows()
-                .map(|(&&a, &&b)| -> Result<i32> {
-                    let ab = input
-                        .get(&(a.to_string(), b.to_string()))
-                        .ok_or_else(|| anyhow!("missing edge {a} -> {b}"))?;
-                    let ba = input
-                        .get(&(b.to_string(), a.to_string()))
-                        .ok_or_else(|| anyhow!("missing edge {b} -> {a}"))?;
-                    Ok(ab + ba)
-                })
-                .sum::<Result<i32>>()
-        })
-        .collect::<Result<Vec<i32>>>()?
-        .into_iter()
-        .max()
-        .unwrap_or_default();
-
-    Ok(max)
+    // Rather than add an explicit "me", which would cause us to have 9x the permutations,
+    // don't consider the last <> first window (circular -> non-circular windows). This implicitly
+    // seats me between the first and last guests in the permutation.
+    solve(input, |perm| Box::new(perm.iter().copied().tuple_windows()))
 }
 
 fn main() -> Result<()> {
