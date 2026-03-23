@@ -93,8 +93,8 @@ fn part1(reindeer: &Input, num_seconds: u32) -> u32 {
 
 fn part2(reindeer: &Input, num_second: u32) -> u32 {
     let mut num_points: HashMap<&Reindeer, u32> = HashMap::with_capacity(reindeer.len());
+    let mut leaders: Vec<&Reindeer> = Vec::with_capacity(reindeer.len());
     for s in 1..=num_second {
-        let mut leaders: Vec<&Reindeer> = Vec::with_capacity(reindeer.len());
         let mut leader_dist = 0;
         for r in reindeer {
             let dist = distance_traveled(r, s);
@@ -107,9 +107,10 @@ fn part2(reindeer: &Input, num_second: u32) -> u32 {
             }
         }
 
-        for r in leaders {
+        for r in &leaders {
             num_points.entry(r).and_modify(|n| *n += 1).or_insert(1);
         }
+        leaders.clear();
     }
 
     num_points.values().max().unwrap_or(&0).to_owned()
