@@ -86,7 +86,7 @@ where
         .combinations_with_replacement(input.len() - 1)
         .map(|mut v| {
             amounts.clear();
-            v.sort();
+            v.sort_unstable();
             // Each v_i represents at which "teaspoon" ingredient ends, exclusive.
             amounts.push(v.first().expect("v is nonempty").to_owned());
             amounts.extend(v.iter().tuple_windows().map(|(&s, &e)| e - s));
@@ -105,13 +105,13 @@ fn score_and_calories(recipe: &Vec<(&Ingredient, i32)>) -> (i32, i32) {
     let mut tex = 0;
     let mut cal = 0;
 
-    recipe.iter().for_each(|&(i, amount)| {
+    for &(i, amount) in recipe {
         cap += i.capacity * amount;
         dur += i.durability * amount;
         fla += i.flavor * amount;
         tex += i.texture * amount;
         cal += i.calories * amount;
-    });
+    }
 
     (cap.max(0) * dur.max(0) * fla.max(0) * tex.max(0), cal)
 }
