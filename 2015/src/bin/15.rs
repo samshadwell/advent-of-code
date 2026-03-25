@@ -74,53 +74,59 @@ fn parse_line(s: &str) -> IResult<&str, Ingredient> {
 
 fn solve<F>(input: &Input, score: F) -> i32
 where
-    F: Fn(&Vec<(&Ingredient, i32)>) -> i32,
+    F: Fn(&[(&Ingredient, i32)]) -> i32,
 {
     // Degenerate case: only 1 ingredient
     if input.len() == 1 {
-        return score(&vec![(input.first().unwrap(), 100)]);
+        return score(&[(input.first().unwrap(), 100)]);
     }
 
     let mut amounts: Vec<i32> = Vec::with_capacity(input.len());
-    (0..100)
+    (0..=100)
         .combinations_with_replacement(input.len() - 1)
         .map(|mut v| {
             amounts.clear();
             v.sort_unstable();
             // Each v_i represents at which "teaspoon" ingredient ends, exclusive.
-            amounts.push(v.first().expect("v is nonempty").to_owned());
+            // v must be nonempty by construction
+            #[allow(clippy::indexing_slicing)]
+            amounts.push(v[0]);
             amounts.extend(v.iter().tuple_windows().map(|(&s, &e)| e - s));
             amounts.push(100 - amounts.iter().sum::<i32>());
 
-            score(&input.iter().zip(amounts.clone()).collect())
+            score(
+                &input
+                    .iter()
+                    .zip(amounts.iter().copied())
+                    .collect::<Vec<_>>(),
+            )
         })
         .max()
         .unwrap_or(0)
 }
 
-fn score_and_calories(recipe: &Vec<(&Ingredient, i32)>) -> (i32, i32) {
-    let mut cap = 0;
-    let mut dur = 0;
-    let mut fla = 0;
-    let mut tex = 0;
-    let mut cal = 0;
-
-    for &(i, amount) in recipe {
-        cap += i.capacity * amount;
-        dur += i.durability * amount;
-        fla += i.flavor * amount;
-        tex += i.texture * amount;
-        cal += i.calories * amount;
-    }
+fn score_and_calories(recipe: &[(&Ingredient, i32)]) -> (i32, i32) {
+    let (cap, dur, fla, tex, cal) = recipe.iter().fold(
+        (0, 0, 0, 0, 0),
+        |(cap, dur, fla, tex, cal), &(i, amount)| {
+            (
+                cap + i.capacity * amount,
+                dur + i.durability * amount,
+                fla + i.flavor * amount,
+                tex + i.texture * amount,
+                cal + i.calories * amount,
+            )
+        },
+    );
 
     (cap.max(0) * dur.max(0) * fla.max(0) * tex.max(0), cal)
 }
 
-fn p1_score(recipe: &Vec<(&Ingredient, i32)>) -> i32 {
+fn p1_score(recipe: &[(&Ingredient, i32)]) -> i32 {
     score_and_calories(recipe).0
 }
 
-fn p2_score(recipe: &Vec<(&Ingredient, i32)>) -> i32 {
+fn p2_score(recipe: &[(&Ingredient, i32)]) -> i32 {
     let (score, cal) = score_and_calories(recipe);
     if cal == 500 { score } else { 0 }
 }
