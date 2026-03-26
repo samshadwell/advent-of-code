@@ -32,29 +32,28 @@ struct MfcsamSample {
 
 impl MfcsamSample {
     fn matches_p1(&self, partial: &AuntMemory) -> bool {
-        (partial.children.is_none_or(|v| v == self.children))
-            && (partial.cats.is_none_or(|v| v == self.cats))
-            && (partial.samoyeds.is_none_or(|v| v == self.samoyeds))
-            && (partial.pomeranians.is_none_or(|v| v == self.pomeranians))
-            && (partial.akitas.is_none_or(|v| v == self.akitas))
-            && (partial.vizslas.is_none_or(|v| v == self.vizslas))
-            && (partial.goldfish.is_none_or(|v| v == self.goldfish))
-            && (partial.trees.is_none_or(|v| v == self.trees))
-            && (partial.cars.is_none_or(|v| v == self.cars))
-            && (partial.perfumes.is_none_or(|v| v == self.perfumes))
+        self.common_matches(partial)
+            && partial.cats.is_none_or(|v| v == self.cats)
+            && partial.pomeranians.is_none_or(|v| v == self.pomeranians)
+            && partial.goldfish.is_none_or(|v| v == self.goldfish)
+            && partial.trees.is_none_or(|v| v == self.trees)
     }
 
     fn matches_p2(&self, partial: &AuntMemory) -> bool {
-        (partial.children.is_none_or(|v| v == self.children))
-            && (partial.cats.is_none_or(|v| v > self.cats))
-            && (partial.samoyeds.is_none_or(|v| v == self.samoyeds))
-            && (partial.pomeranians.is_none_or(|v| v < self.pomeranians))
-            && (partial.akitas.is_none_or(|v| v == self.akitas))
-            && (partial.vizslas.is_none_or(|v| v == self.vizslas))
-            && (partial.goldfish.is_none_or(|v| v < self.goldfish))
-            && (partial.trees.is_none_or(|v| v > self.trees))
-            && (partial.cars.is_none_or(|v| v == self.cars))
-            && (partial.perfumes.is_none_or(|v| v == self.perfumes))
+        self.common_matches(partial)
+            && partial.cats.is_none_or(|v| v > self.cats)
+            && partial.pomeranians.is_none_or(|v| v < self.pomeranians)
+            && partial.goldfish.is_none_or(|v| v < self.goldfish)
+            && partial.trees.is_none_or(|v| v > self.trees)
+    }
+
+    fn common_matches(&self, partial: &AuntMemory) -> bool {
+        partial.children.is_none_or(|v| v == self.children)
+            && partial.samoyeds.is_none_or(|v| v == self.samoyeds)
+            && partial.akitas.is_none_or(|v| v == self.akitas)
+            && partial.vizslas.is_none_or(|v| v == self.vizslas)
+            && partial.cars.is_none_or(|v| v == self.cars)
+            && partial.perfumes.is_none_or(|v| v == self.perfumes)
     }
 }
 
@@ -152,10 +151,10 @@ fn parse<R: BufRead>(reader: R) -> Result<Vec<AuntMemory>> {
         .lines()
         .map(|l| {
             let line = l.map_err(|e| anyhow!("error reading line {e}"))?;
-            let res = parse_sue(&line)
+            let (_, aunt) = parse_sue(&line)
                 .finish()
-                .map_err(|e| anyhow!("parse error {e}"))?;
-            Ok(res.1)
+                .map_err(|e| anyhow!("parse error on line '{line}': {e}"))?;
+            Ok(aunt)
         })
         .collect()
 }
@@ -164,14 +163,17 @@ fn solve<F>(aunts: &[AuntMemory], key: &MfcsamSample, f: F) -> Result<u16>
 where
     F: Fn(&MfcsamSample, &AuntMemory) -> bool,
 {
-    let matches: Vec<_> = aunts.iter().filter(|a| f(key, a)).collect();
-    if matches.is_empty() {
-        Err(anyhow!("No matches found for given key"))
-    } else if matches.len() > 1 {
-        Err(anyhow!("More than one match found for given key"))
-    } else {
-        Ok(matches.first().unwrap().id)
-    }
+    let mut matches = aunts.iter().filter(|a| f(key, a));
+    matches.next().map_or_else(
+        || Err(anyhow!("No matches found")),
+        |first| {
+            if matches.next().is_some() {
+                Err(anyhow!("More than one match found"))
+            } else {
+                Ok(first.id)
+            }
+        },
+    )
 }
 
 fn part1(aunts: &[AuntMemory], key: &MfcsamSample) -> Result<u16> {
