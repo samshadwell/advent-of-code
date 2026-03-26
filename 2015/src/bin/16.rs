@@ -226,6 +226,9 @@ mod tests {
 
     const TEST: &str = "\
 Sue 1: children: 1, cars: 8, vizslas: 7
+Sue 2: akitas: 10, perfumes: 10, children: 5
+Sue 3: cars: 5, pomeranians: 4, vizslas: 1
+Sue 4: cats: 10, trees: 10, pomeranians: 0, goldfish: 0
 ";
 
     #[test]
@@ -233,7 +236,7 @@ Sue 1: children: 1, cars: 8, vizslas: 7
         let result = super::parse(BufReader::new(TEST.as_bytes()));
         assert!(result.is_ok());
         let sues = result.unwrap();
-        assert_eq!(1, sues.len());
+        assert_eq!(4, sues.len());
         assert_eq!(
             sues.first().unwrap(),
             &AuntMemory {
@@ -250,5 +253,47 @@ Sue 1: children: 1, cars: 8, vizslas: 7
                 perfumes: None,
             }
         );
+    }
+
+    #[test]
+    fn part1() {
+        let aunts = super::parse(BufReader::new(TEST.as_bytes())).expect("parse succeeds");
+        let key = MfcsamSample {
+            children: 5,
+            cats: 100,
+            samoyeds: 100,
+            pomeranians: 100,
+            akitas: 10,
+            vizslas: 100,
+            goldfish: 100,
+            trees: 100,
+            cars: 100,
+            perfumes: 10,
+        };
+
+        let result = super::part1(&aunts, &key);
+        assert!(result.is_ok());
+        assert_eq!(2, result.unwrap());
+    }
+
+    #[test]
+    fn part2() {
+        let aunts = super::parse(BufReader::new(TEST.as_bytes())).expect("parse succeeds");
+        let key = MfcsamSample {
+            children: 5,
+            cats: 5,
+            samoyeds: 5,
+            pomeranians: 5,
+            akitas: 5,
+            vizslas: 5,
+            goldfish: 5,
+            trees: 5,
+            cars: 5,
+            perfumes: 5,
+        };
+
+        let result = super::part2(&aunts, &key);
+        assert!(result.is_ok());
+        assert_eq!(4, result.unwrap());
     }
 }
