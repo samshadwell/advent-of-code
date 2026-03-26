@@ -74,8 +74,8 @@ struct AuntMemory {
 }
 
 impl AuntMemory {
-    fn new(id: u16) -> Self {
-        AuntMemory {
+    const fn new(id: u16) -> Self {
+        Self {
             id,
             children: None,
             cats: None,
@@ -99,7 +99,7 @@ enum UnknownAttrError<I> {
 
 impl<I> nom::error::ParseError<I> for UnknownAttrError<I> {
     fn from_error_kind(input: I, kind: nom::error::ErrorKind) -> Self {
-        UnknownAttrError::Nom(input, kind)
+        Self::Nom(input, kind)
     }
     fn append(_input: I, _kind: nom::error::ErrorKind, other: Self) -> Self {
         other
@@ -175,11 +175,11 @@ where
 }
 
 fn part1(aunts: &[AuntMemory], key: &MfcsamSample) -> Result<u16> {
-    solve(aunts, key, |k, a| k.matches_p1(a))
+    solve(aunts, key, MfcsamSample::matches_p1)
 }
 
 fn part2(aunts: &[AuntMemory], key: &MfcsamSample) -> Result<u16> {
-    solve(aunts, key, |k, a| k.matches_p2(a))
+    solve(aunts, key, MfcsamSample::matches_p2)
 }
 
 fn main() -> Result<()> {
