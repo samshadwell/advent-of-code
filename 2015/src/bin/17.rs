@@ -18,29 +18,30 @@ fn parse(input: &str) -> Result<Vec<u16>> {
     Ok(values)
 }
 
-fn num_solutions(nums: &[u16], start_idx: usize, target: u16) -> usize {
+fn num_solutions(buckets: &[u16], target: u16) -> usize {
     if target == 0 {
         // If the target is 0, there is exactly one way to get it (take empty set)
         return 1;
-    } else if start_idx >= nums.len() {
-        return 0;
     }
 
-    let mut total = 0;
-    let next_bucket = *nums
-        .get(start_idx)
-        .expect("guaranteed in-bounds by above check");
-    if next_bucket <= target {
-        // Can fill bucket i, do so
-        total += num_solutions(nums, start_idx + 1, target - next_bucket);
+    match buckets.split_first() {
+        // No buckets left and nonzero target -> no ways to get there
+        None => 0,
+        Some((&next_bucket, rest)) => {
+            let mut total = 0;
+            if next_bucket <= target {
+                // Can fill next_bucket, do so
+                total += num_solutions(rest, target - next_bucket);
+            }
+            // Also consider case where we don't use next_bucket
+            total += num_solutions(rest, target);
+            total
+        }
     }
-    // Also consider case where we don't use bucket i
-    total += num_solutions(nums, start_idx + 1, target);
-    total
 }
 
 fn part1(input: &[u16], target: u16) -> usize {
-    num_solutions(input, 0, target)
+    num_solutions(input, target)
 }
 
 // Merge the two (ways, num_buckets) tuples, preserving only the number of way with the minimal
@@ -58,33 +59,32 @@ fn merge(a: Option<(usize, usize)>, b: Option<(usize, usize)>) -> Option<(usize,
 }
 
 // Each tuple (n, m) represents finding n ways to some solution using exactly m buckets
-fn ways_to_min_buckets(nums: &[u16], start_idx: usize, target: u16) -> Option<(usize, usize)> {
+fn ways_to_min_buckets(buckets: &[u16], target: u16) -> Option<(usize, usize)> {
     if target == 0 {
         // If the target is 0 we get **1** solution by taking **0** buckets
         return Some((1, 0));
-    } else if start_idx >= nums.len() {
-        return None;
     }
 
-    let mut min_so_far = None;
-    let next_bucket = *nums
-        .get(start_idx)
-        .expect("guaranteed in-bounds by above check");
-    if next_bucket <= target {
-        // Can fill bucket i, do so
-        if let Some((ways, buckets)) =
-            ways_to_min_buckets(nums, start_idx + 1, target - next_bucket)
-        {
-            min_so_far = Some((ways, buckets + 1));
+    match buckets.split_first() {
+        // No buckets left and nonzero target, no way to a solution
+        None => None,
+        Some((&next_bucket, rest)) => {
+            let mut min_so_far = None;
+            if next_bucket <= target {
+                // Can fill bucket i, do so
+                if let Some((ways, buckets)) = ways_to_min_buckets(rest, target - next_bucket) {
+                    min_so_far = Some((ways, buckets + 1));
+                }
+            }
+            // Also consider case where we don't use bucket i
+            let without_bucket = ways_to_min_buckets(rest, target);
+            merge(min_so_far, without_bucket)
         }
     }
-    // Also consider case where we don't use bucket i
-    let without_bucket = ways_to_min_buckets(nums, start_idx + 1, target);
-    merge(min_so_far, without_bucket)
 }
 
 fn part2(input: &[u16], target: u16) -> usize {
-    match ways_to_min_buckets(input, 0, target) {
+    match ways_to_min_buckets(input, target) {
         None => 0,
         Some((ways, _)) => ways,
     }
