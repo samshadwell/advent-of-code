@@ -5,6 +5,7 @@ use nom::character::complete::{line_ending, u16};
 use nom::multi::separated_list0;
 use nom::{Finish, Parser};
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::time::Instant;
 
 const DAY: &str = "17";
@@ -18,10 +19,18 @@ fn parse(input: &str) -> Result<Vec<u16>> {
     Ok(values)
 }
 
-fn num_solutions(buckets: &[u16], target: u16) -> usize {
+fn num_solutions<'a>(
+    buckets: &'a [u16],
+    target: u16,
+    memo: &mut HashMap<(&'a [u16], u16), usize>,
+) -> usize {
     if target == 0 {
         // If the target is 0, there is exactly one way to get it (take empty set)
         return 1;
+    }
+
+    if let Some(&cached) = memo.get(&(buckets, target)) {
+        return cached;
     }
 
     match buckets.split_first() {
@@ -31,22 +40,26 @@ fn num_solutions(buckets: &[u16], target: u16) -> usize {
             let mut total = 0;
             if next_bucket <= target {
                 // Can fill next_bucket, do so
-                total += num_solutions(rest, target - next_bucket);
+                total += num_solutions(rest, target - next_bucket, memo);
             }
             // Also consider case where we don't use next_bucket
-            total += num_solutions(rest, target);
+            total += num_solutions(rest, target, memo);
+            memo.insert((buckets, target), total);
             total
         }
     }
 }
 
 fn part1(input: &[u16], target: u16) -> usize {
-    num_solutions(input, target)
+    num_solutions(input, target, &mut HashMap::with_capacity(input.len()))
 }
+
+// Each tuple (n, m) represents finding n ways to some solution using exactly m buckets
+type MinWays = (usize, usize);
 
 // Merge the two (ways, num_buckets) tuples, preserving only the number of way with the minimal
 // possible buckets
-fn merge(a: Option<(usize, usize)>, b: Option<(usize, usize)>) -> Option<(usize, usize)> {
+fn merge(a: Option<MinWays>, b: Option<MinWays>) -> Option<MinWays> {
     match (a, b) {
         (None, _) => b,
         (_, None) => a,
@@ -58,11 +71,18 @@ fn merge(a: Option<(usize, usize)>, b: Option<(usize, usize)>) -> Option<(usize,
     }
 }
 
-// Each tuple (n, m) represents finding n ways to some solution using exactly m buckets
-fn ways_to_min_buckets(buckets: &[u16], target: u16) -> Option<(usize, usize)> {
+fn ways_to_min_buckets<'a>(
+    buckets: &'a [u16],
+    target: u16,
+    memo: &mut HashMap<(&'a [u16], u16), Option<MinWays>>,
+) -> Option<MinWays> {
     if target == 0 {
         // If the target is 0 we get **1** solution by taking **0** buckets
         return Some((1, 0));
+    }
+
+    if let Some(&cached) = memo.get(&(buckets, target)) {
+        return cached;
     }
 
     match buckets.split_first() {
@@ -72,19 +92,22 @@ fn ways_to_min_buckets(buckets: &[u16], target: u16) -> Option<(usize, usize)> {
             let mut min_so_far = None;
             if next_bucket <= target {
                 // Can fill bucket i, do so
-                if let Some((ways, buckets)) = ways_to_min_buckets(rest, target - next_bucket) {
+                if let Some((ways, buckets)) = ways_to_min_buckets(rest, target - next_bucket, memo)
+                {
                     min_so_far = Some((ways, buckets + 1));
                 }
             }
             // Also consider case where we don't use bucket i
-            let without_bucket = ways_to_min_buckets(rest, target);
-            merge(min_so_far, without_bucket)
+            let without_bucket = ways_to_min_buckets(rest, target, memo);
+            min_so_far = merge(min_so_far, without_bucket);
+            memo.insert((buckets, target), min_so_far);
+            min_so_far
         }
     }
 }
 
 fn part2(input: &[u16], target: u16) -> usize {
-    match ways_to_min_buckets(input, target) {
+    match ways_to_min_buckets(input, target, &mut HashMap::with_capacity(input.len())) {
         None => 0,
         Some((ways, _)) => ways,
     }
