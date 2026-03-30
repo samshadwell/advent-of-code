@@ -24,7 +24,7 @@ fn parse(input: &str) -> Result<Grid<bool>> {
     .parse(input)
     .finish()
     .map_err(|e: nom::error::Error<_>| anyhow!("parsing error: {e}"))?;
-    Ok(Grid::new(values))
+    Grid::new(values)
 }
 
 fn next_state(pos: &Position, state: &Grid<bool>) -> Option<bool> {
@@ -58,10 +58,7 @@ fn part1(initial: &Grid<bool>, num_steps: usize) -> usize {
         next_step(&curr, &mut next).expect("next and curr are same size");
         (curr, next) = (next, curr);
     }
-    curr.all_positions()
-        .map(|p| curr.get(&p))
-        .filter(|opt| opt.is_some_and(|&b| b))
-        .count()
+    curr.values().filter(|&&v| v).count()
 }
 
 fn part2(initial: &Grid<bool>, num_steps: usize) -> usize {
@@ -83,10 +80,7 @@ fn part2(initial: &Grid<bool>, num_steps: usize) -> usize {
             curr.set(corner, true).expect("corner is valid coordinate");
         }
     }
-    curr.all_positions()
-        .map(|p| curr.get(&p))
-        .filter(|opt| opt.is_some_and(|&b| b))
-        .count()
+    curr.values().filter(|&&v| v).count()
 }
 
 fn main() -> Result<()> {

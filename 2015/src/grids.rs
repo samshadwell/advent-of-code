@@ -6,62 +6,23 @@ pub struct Position {
     col: usize,
 }
 
-#[derive(Debug)]
-pub struct AdjacentIter<'a> {
-    base: &'a Position,
-    row_offset: i32,
-    col_offset: i32,
-}
-
 impl Position {
     #[must_use]
     pub const fn new(row: usize, col: usize) -> Self {
         Self { row, col }
     }
 
-    #[must_use]
-    pub const fn adjacent(&self) -> AdjacentIter<'_> {
-        AdjacentIter::new(self)
-    }
-}
-
-impl<'a> AdjacentIter<'a> {
-    const fn new(base: &'a Position) -> Self {
-        AdjacentIter {
-            base,
-            row_offset: -1,
-            col_offset: -2,
-        }
-    }
-}
-
-impl Iterator for AdjacentIter<'_> {
-    type Item = Position;
-
-    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            self.col_offset += 1;
-            if self.col_offset > 1 {
-                self.col_offset = -1;
-                self.row_offset += 1;
-            }
-
-            if self.row_offset > 1 {
-                return None;
-            } else if self.col_offset == 0 && self.row_offset == 0 {
-                // Skip the input coordinate itself
-                continue;
-            }
-
-            let new_col = (self.base.col as i32) + self.col_offset;
-            let new_row = (self.base.row as i32) + self.row_offset;
-
-            if new_col >= 0 && new_row >= 0 {
-                #[allow(clippy::cast_sign_loss)]
-                return Some(Position::new(new_row as usize, new_col as usize));
-            }
-        }
+    pub fn adjacent(&self) -> impl Iterator<Item = Self> + '_ {
+        (-1..=1).flat_map(move |row_offset| {
+            (-1..=1).filter_map(move |col_offset| {
+                if row_offset == 0 && col_offset == 0 {
+                    return None;
+                }
+                let new_row = self.row.checked_add_signed(row_offset as isize)?;
+                let new_col = self.col.checked_add_signed(col_offset as isize)?;
+                Some(Self::new(new_row, new_col))
+            })
+        })
     }
 }
 
@@ -69,9 +30,16 @@ impl Iterator for AdjacentIter<'_> {
 pub struct Grid<T>(Vec<Vec<T>>);
 
 impl<T> Grid<T> {
-    #[must_use]
-    pub const fn new(g: Vec<Vec<T>>) -> Self {
-        Self(g)
+    /// # Errors
+    /// If given vectors don't form a rectangular grid (they're jagged)
+    pub fn new(g: Vec<Vec<T>>) -> Result<Self> {
+        let first_row_len = g.first().map_or(0, std::vec::Vec::len);
+        for row in &g {
+            if row.len() != first_row_len {
+                return Err(anyhow!("grid is not rectangular"));
+            }
+        }
+        Ok(Self(g))
     }
 
     #[must_use]
@@ -97,6 +65,10 @@ impl<T> Grid<T> {
     #[must_use]
     pub const fn all_positions(&self) -> PositionsIter<'_, T> {
         PositionsIter::new(self)
+    }
+
+    pub fn values(&self) -> impl Iterator<Item = &T> {
+        self.0.iter().flatten()
     }
 
     #[must_use]
@@ -151,12 +123,33 @@ mod tests {
     use crate::grids::{Grid, Position};
 
     #[test]
+    fn test_new() {
+        assert!(
+            Grid::new(vec![
+                vec![0, 1, 2], // force multi-line format
+                vec![3, 4, 5],
+            ])
+            .is_ok()
+        );
+        assert!(Grid::<bool>::new(vec![]).is_ok());
+
+        assert!(
+            Grid::new(vec![
+                vec![0, 1, 2], // force multi-line format
+                vec![3]
+            ])
+            .is_err()
+        );
+    }
+
+    #[test]
     fn test_get() {
         let grid = Grid::new(vec![
             vec![0, 1, 2, 3], // force multi-line format
             vec![4, 5, 6, 7],
             vec![8, 9, 10, 11],
-        ]);
+        ])
+        .expect("succeeds");
 
         // Valid
         assert_eq!(Some(&2), grid.get(&Position::new(0, 2)));
@@ -172,7 +165,8 @@ mod tests {
             vec![0, 1, 2, 3], // force multi-line format
             vec![4, 5, 6, 7],
             vec![8, 9, 10, 11],
-        ]);
+        ])
+        .expect("succeeds");
 
         assert_eq!(
             vec![Some(&1), Some(&4), Some(&5)],
