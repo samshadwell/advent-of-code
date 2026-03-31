@@ -26,40 +26,19 @@ fn parse(input: &str) -> Result<(Replacements<'_>, &str)> {
         .finish()
         .map_err(|e: nom::error::Error<_>| anyhow!("parsing error: {e}"))?;
 
-    let grouped_replacements = rules.iter().map(|(k, v)| (k, *v)).chunk_by(|(k, _)| *k);
-    let mut replacements = HashMap::new();
-    for (k, tups) in &grouped_replacements {
-        replacements.insert(*k, tups.map(|tup| tup.1).collect());
-    }
-
+    let replacements = rules.into_iter().into_group_map();
     Ok((replacements, molecule))
 }
 
 fn next_molecules(replacements: &Replacements, molecule: &str) -> Result<HashSet<String>> {
     let mut set = HashSet::new();
-    let max_replacement_input = replacements
-        .keys()
-        .map(|k| k.len())
-        .max()
-        .unwrap_or_default();
-
-    for window_len in 0..=max_replacement_input {
-        for window_start in 0..molecule.len() {
-            let (before, rest) = molecule
-                .split_at_checked(window_start)
-                .ok_or_else(|| anyhow!("string contains non-ascii characters"))?;
-            match rest.split_at_checked(window_len) {
-                None => {}
-                Some((to_replace, tail)) => match replacements.get(to_replace) {
-                    None => {}
-                    Some(rs) => {
-                        for r in rs {
-                            let mut buf = String::new();
-                            write!(buf, "{before}{r}{tail}")?;
-                            set.insert(buf);
-                        }
-                    }
-                },
+    for (&from, tos) in replacements {
+        for (start, _) in molecule.match_indices(from) {
+            let end = start + from.len();
+            for &to in tos {
+                let mut buf = String::with_capacity(molecule.len() + to.len() - from.len());
+                write!(buf, "{}{to}{}", &molecule[..start], &molecule[end..])?;
+                set.insert(buf);
             }
         }
     }
@@ -84,7 +63,7 @@ fn part2(replacements: &Replacements, target: &str) -> Result<usize> {
         .iter()
         .flat_map(|(&k, vs)| vs.iter().map(move |&v| (v, k)))
         .collect();
-    inverted.sort_by(|(a, _), (b, _)| a.len().cmp(&b.len()).reverse());
+    inverted.sort_by_key(|(v, _)| std::cmp::Reverse(v.len()));
 
     let mut curr = target.to_string();
     let mut num_replacements = 0;
