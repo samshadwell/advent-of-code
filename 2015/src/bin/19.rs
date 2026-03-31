@@ -35,7 +35,7 @@ fn parse(input: &str) -> Result<(Replacements<'_>, &str)> {
     Ok((replacements, molecule))
 }
 
-fn part1(replacements: &Replacements, molecule: &str) -> Result<usize> {
+fn next_molecules(replacements: &Replacements, molecule: &str) -> Result<HashSet<String>> {
     let mut set = HashSet::new();
     let max_replacement_input = replacements
         .keys()
@@ -64,13 +64,46 @@ fn part1(replacements: &Replacements, molecule: &str) -> Result<usize> {
         }
     }
 
-    Ok(set.len())
+    Ok(set)
 }
 
-// TODO: Change result type and implement
-#[allow(clippy::missing_const_for_fn)]
-fn part2(_input: i32) -> i32 {
-    0
+fn part1(replacements: &Replacements, molecule: &str) -> Result<usize> {
+    Ok(next_molecules(replacements, molecule)?.len())
+}
+
+fn part2(replacements: &Replacements, target: &str) -> Result<usize> {
+    // This one is tricky. First I tried doing something like BFS, but it blows up way too quickly.
+    // So the second solution (which works on my input) is to instead do it greedily, working backwards.
+    // Take all the X => Y replacements, at every step replace the longest such Y that appears in our
+    // string with its corresponding X. Repeat this until we get the initial "e" string, or we can't
+    // do any more steps.
+    // This happens to work for my input but it certainly is not a general solution that would work for
+    // all possible replacements/goal strings. It probably works for all the AoC inputs, though, due to
+    // some cleverness in the problem formulation.
+    let mut inverted: Vec<_> = replacements
+        .iter()
+        .flat_map(|(&k, vs)| vs.iter().map(move |&v| (v, k)))
+        .collect();
+    inverted.sort_by(|(a, _), (b, _)| a.len().cmp(&b.len()).reverse());
+
+    let mut curr = target.to_string();
+    let mut num_replacements = 0;
+    while curr != "e" {
+        let mut did_replacement = false;
+        for (long, short) in &inverted {
+            if curr.contains(long) {
+                curr = curr.replacen(long, short, 1);
+                num_replacements += 1;
+                did_replacement = true;
+                break;
+            }
+        }
+        if !did_replacement {
+            return Err(anyhow!("did not find way create given target"));
+        }
+    }
+
+    Ok(num_replacements)
 }
 
 fn main() -> Result<()> {
@@ -90,7 +123,7 @@ fn main() -> Result<()> {
 
     println!("\n=== Part 2 ===");
     let p2_time = Instant::now();
-    let result = part2(0);
+    let result = part2(&replacements, molecule)?;
     println!("Result = {result}");
     println!("Elapsed = {:.2?}", p2_time.elapsed());
 
@@ -102,6 +135,8 @@ mod tests {
     use super::*;
 
     const TEST: &str = "\
+e => H
+e => O
 H => HO
 H => OH
 O => HH
@@ -115,7 +150,11 @@ HOH
         assert!(result.is_ok());
         let (replacements, molecule) = result.unwrap();
         assert_eq!(
-            HashMap::from([("H", vec!["HO", "OH"]), ("O", vec!["HH"])]),
+            HashMap::from([
+                ("e", vec!["H", "O"]),
+                ("H", vec!["HO", "OH"]),
+                ("O", vec!["HH"])
+            ]),
             replacements
         );
         assert_eq!("HOH", molecule);
@@ -130,10 +169,8 @@ HOH
 
     #[test]
     fn part_2() {
-        // TODO: Modify expected
-        let expected = 0;
-        let _input = super::parse(TEST).expect("parse succeeds");
-        let result = part2(0);
-        assert_eq!(result, expected)
+        let (replacements, _) = super::parse(TEST).expect("parse succeeds");
+        assert_eq!(3, part2(&replacements, "HOH").expect("succeeds"));
+        assert_eq!(6, part2(&replacements, "HOHOHO").expect("succeeds"));
     }
 }
