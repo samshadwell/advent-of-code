@@ -1,7 +1,6 @@
 use adv_code_2015::start_day;
 use anyhow::{Result, anyhow};
 use itertools::Itertools;
-use std::cmp::Ordering;
 use std::{iter::once, time::Instant};
 
 const DAY: &str = "21";
@@ -157,10 +156,7 @@ fn damage_dealt(attacker: &Stats, defender: &Stats) -> u16 {
 fn player_wins(player: &Stats, boss: &Stats) -> bool {
     let player_turns_to_0 = player.hit_points.div_ceil(damage_dealt(boss, player));
     let boss_turns_to_0 = boss.hit_points.div_ceil(damage_dealt(player, boss));
-    match player_turns_to_0.cmp(&boss_turns_to_0) {
-        Ordering::Greater | Ordering::Equal => true,
-        Ordering::Less => false,
-    }
+    player_turns_to_0 >= boss_turns_to_0
 }
 
 fn all_loadouts(shop: &Shop) -> impl Iterator<Item = Loadout<'_>> {
