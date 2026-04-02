@@ -1,7 +1,8 @@
 use adv_code_2015::start_day;
 use anyhow::{Result, anyhow};
 use itertools::Itertools;
-use std::{cmp::Reverse, iter::once, time::Instant};
+use std::cmp::Ordering;
+use std::{iter::once, time::Instant};
 
 const DAY: &str = "21";
 
@@ -134,19 +135,18 @@ struct Stats {
 
 impl Stats {
     fn make_player(loadout: &Loadout) -> Self {
-        let mut player = Self {
-            hit_points: 100,
-            damage: 0,
-            armor: 0,
-        };
-        player.damage = loadout.weapon.damage
+        let damage = loadout.weapon.damage
             + loadout.ring_1.map(|r1| r1.damage).unwrap_or_default()
             + loadout.ring_2.map(|r2| r2.damage).unwrap_or_default();
-        player.armor = loadout.armor.map(|a| a.armor).unwrap_or_default()
+        let armor = loadout.armor.map(|a| a.armor).unwrap_or_default()
             + loadout.ring_1.map(|r1| r1.armor).unwrap_or_default()
             + loadout.ring_2.map(|r2| r2.armor).unwrap_or_default();
 
-        player
+        Self {
+            hit_points: 100,
+            damage,
+            armor,
+        }
     }
 }
 
@@ -155,28 +155,17 @@ fn damage_dealt(attacker: &Stats, defender: &Stats) -> u16 {
 }
 
 fn player_wins(player: &Stats, boss: &Stats) -> bool {
-    let mut player_health = player.hit_points;
-    let mut boss_health = boss.hit_points;
-    loop {
-        boss_health = boss_health.saturating_sub(damage_dealt(player, boss));
-        if boss_health == 0 {
-            return true;
-        }
-        player_health = player_health.saturating_sub(damage_dealt(boss, player));
-        if player_health == 0 {
-            return false;
-        }
+    let player_turns_to_0 = player.hit_points.div_ceil(damage_dealt(boss, player));
+    let boss_turns_to_0 = boss.hit_points.div_ceil(damage_dealt(player, boss));
+    match player_turns_to_0.cmp(&boss_turns_to_0) {
+        Ordering::Greater | Ordering::Equal => true,
+        Ordering::Less => false,
     }
 }
 
 fn all_loadouts(shop: &Shop) -> impl Iterator<Item = Loadout<'_>> {
     let armor_choices = shop.armor.iter().map(Some).chain(once(None));
-    let ring_choices = shop
-        .rings
-        .iter()
-        .combinations(2)
-        .chain(shop.rings.iter().combinations(1))
-        .chain(once(vec![]));
+    let ring_choices = (0..=2).flat_map(|n| shop.rings.iter().combinations(n));
     // Oh yeah that's an iterator chain
     shop.weapons
         .iter()
@@ -192,16 +181,16 @@ fn all_loadouts(shop: &Shop) -> impl Iterator<Item = Loadout<'_>> {
 
 fn part1(shop: &Shop, boss_stats: &Stats) -> Option<u16> {
     all_loadouts(shop)
-        .sorted_by_key(Loadout::cost)
-        .find(|l| player_wins(&Stats::make_player(l), boss_stats))
+        .filter(|l| player_wins(&Stats::make_player(l), boss_stats))
         .map(|l| l.cost())
+        .min()
 }
 
 fn part2(shop: &Shop, boss_stats: &Stats) -> Option<u16> {
     all_loadouts(shop)
-        .sorted_by_key(|l| Reverse(l.cost()))
-        .find(|l| !player_wins(&Stats::make_player(l), boss_stats))
+        .filter(|l| !player_wins(&Stats::make_player(l), boss_stats))
         .map(|l| l.cost())
+        .max()
 }
 
 fn main() -> Result<()> {
