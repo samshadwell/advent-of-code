@@ -5,8 +5,7 @@ use const_format::concatcp;
 use nom::IResult;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
-use nom::character::complete::{char, i32 as i32_nom};
-use nom::character::streaming::line_ending;
+use nom::character::complete::{char, i32 as i32_nom, line_ending};
 use nom::combinator::value;
 use nom::multi::separated_list0;
 use nom::sequence::preceded;
@@ -62,18 +61,22 @@ struct MachineState {
     b: u32,
 }
 
-impl MachineState {
-    const fn get_mut(&mut self, r: Register) -> &mut u32 {
-        match r {
-            Register::A => &mut self.a,
-            Register::B => &mut self.b,
+impl std::ops::Index<Register> for MachineState {
+    type Output = u32;
+
+    fn index(&self, index: Register) -> &Self::Output {
+        match index {
+            Register::A => &self.a,
+            Register::B => &self.b,
         }
     }
+}
 
-    const fn get(&self, r: Register) -> u32 {
-        match r {
-            Register::A => self.a,
-            Register::B => self.b,
+impl std::ops::IndexMut<Register> for MachineState {
+    fn index_mut(&mut self, index: Register) -> &mut Self::Output {
+        match index {
+            Register::A => &mut self.a,
+            Register::B => &mut self.b,
         }
     }
 }
@@ -90,29 +93,26 @@ fn simulate(instructions: &[Instruction], state: &mut MachineState) {
                 return;
             }
             Some(Instruction::Hlf(r)) => {
-                let reg = state.get_mut(*r);
-                *reg /= 2;
+                state[*r] /= 2;
             }
             Some(Instruction::Tpl(r)) => {
-                let reg = state.get_mut(*r);
-                *reg *= 3;
+                state[*r] *= 3;
             }
             Some(Instruction::Inc(r)) => {
-                let reg = state.get_mut(*r);
-                *reg += 1;
+                state[*r] += 1;
             }
             Some(Instruction::Jmp(i)) => {
                 state.program_counter += i;
                 continue;
             }
             Some(Instruction::Jie(r, i)) => {
-                if state.get(*r).is_multiple_of(2) {
+                if state[*r].is_multiple_of(2) {
                     state.program_counter += i;
                     continue;
                 }
             }
             Some(Instruction::Jio(r, i)) => {
-                if state.get(*r) == 1 {
+                if state[*r] == 1 {
                     state.program_counter += i;
                     continue;
                 }
