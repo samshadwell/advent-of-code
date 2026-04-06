@@ -3,13 +3,14 @@ use std::time::Instant;
 
 const DAY: &str = "25";
 
+#[derive(Debug, Clone, Copy)]
 struct Location {
     row: usize,
     col: usize,
 }
 
 impl Location {
-    fn to_ordinal(&self) -> usize {
+    fn ordinal(&self) -> usize {
         let diag = self.row + self.col - 1;
         (1..diag).sum::<usize>() + self.col
     }
@@ -17,9 +18,8 @@ impl Location {
 
 fn part1(first: usize, loc: &Location) -> usize {
     let mut val = first;
-    #[allow(clippy::unreadable_literal)]
-    for _ in 2..=loc.to_ordinal() {
-        val = (val * 252533) % 33554393;
+    for _ in 2..=loc.ordinal() {
+        val = (val * 252_533) % 33_554_393;
     }
     val
 }
@@ -27,8 +27,7 @@ fn part1(first: usize, loc: &Location) -> usize {
 fn main() {
     start_day(DAY);
 
-    #[allow(clippy::unreadable_literal)]
-    let initial = 20151125;
+    let initial = 20_151_125;
     let input = Location {
         row: 2981,
         col: 3075,
@@ -47,9 +46,9 @@ mod tests {
 
     #[test]
     fn test_to_ordinal() {
-        assert_eq!(Location { row: 1, col: 1 }.to_ordinal(), 1);
-        assert_eq!(Location { row: 1, col: 5 }.to_ordinal(), 15);
-        assert_eq!(Location { row: 3, col: 4 }.to_ordinal(), 19);
+        assert_eq!(Location { row: 1, col: 1 }.ordinal(), 1);
+        assert_eq!(Location { row: 1, col: 5 }.ordinal(), 15);
+        assert_eq!(Location { row: 3, col: 4 }.ordinal(), 19);
     }
 
     #[test]
