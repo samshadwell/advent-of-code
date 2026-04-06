@@ -5,18 +5,18 @@ const DAY: &str = "25";
 
 #[derive(Debug, Clone, Copy)]
 struct Location {
-    row: usize,
-    col: usize,
+    row: u64,
+    col: u64,
 }
 
 impl Location {
-    fn ordinal(&self) -> usize {
+    fn ordinal(&self) -> u64 {
         let diag = self.row + self.col - 1;
-        (1..diag).sum::<usize>() + self.col
+        (1..diag).sum::<u64>() + self.col
     }
 }
 
-fn part1(first: usize, loc: &Location) -> usize {
+fn part1(first: u64, loc: &Location) -> u64 {
     let mut val = first;
     for _ in 2..=loc.ordinal() {
         val = (val * 252_533) % 33_554_393;
