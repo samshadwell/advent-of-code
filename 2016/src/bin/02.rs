@@ -72,7 +72,7 @@ struct FancyButton(char);
 impl FancyButton {
     fn new(c: char) -> Result<Self> {
         match c {
-            '0'..='9' | 'A'..='D' => Ok(Self(c)),
+            '1'..='9' | 'A'..='D' => Ok(Self(c)),
             _ => Err(anyhow!("invalid FancyButton character {c}")),
         }
     }
