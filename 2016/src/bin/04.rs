@@ -78,7 +78,7 @@ fn part1(input: &[RoomId]) -> u32 {
 fn part2(input: &[RoomId]) -> Option<u32> {
     input
         .iter()
-        // Found the correct name by going through all the valid decrypted, names
+        // Found the correct name by going through all the valid decrypted names
         .find(|r| r.is_valid() && r.decrypt() == "northpole object storage ")
         .map(|r| r.id)
 }
