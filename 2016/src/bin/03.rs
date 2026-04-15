@@ -9,7 +9,7 @@ use std::time::Instant;
 const DAY: &str = "03";
 const INPUT_FILE: &str = concatcp!("input/", DAY, ".txt");
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Triangle(u32, u32, u32);
 
 impl Triangle {
