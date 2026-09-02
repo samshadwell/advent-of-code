@@ -38,7 +38,7 @@ fn parse(input: &str) -> Result<Vec<Instruction>> {
     Ok(instructions)
 }
 
-fn print(display: &Vec<Vec<bool>>) {
+fn print(display: &[Vec<bool>]) {
     for row in display {
         for light in row {
             match light {
@@ -96,7 +96,6 @@ fn main() -> Result<()> {
     println!("\n=== Part 2 ===");
     let p2_time = Instant::now();
     print(&display);
-    println!("Result = {result}");
     println!("Elapsed = {:.2?}", p2_time.elapsed());
 
     Ok(())
