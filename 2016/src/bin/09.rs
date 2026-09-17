@@ -53,9 +53,9 @@ fn part1(input: &[&str]) -> usize {
     input.iter().map(|s| decompressed_length(s)).sum()
 }
 
-fn recursive_decompressed_len(s: &str) -> usize {
+fn recursive_decompressed_len(s: &mut dyn Iterator<Item = char>) -> usize {
     let mut len = 0;
-    let mut chars = s.chars().peekable();
+    let mut chars = s.peekable();
     while let Some(c) = chars.next() {
         match c {
             '(' => {
@@ -81,9 +81,9 @@ fn recursive_decompressed_len(s: &str) -> usize {
 
                 if matches!(chars.peek(), Some(')')) {
                     chars.next(); // Consume the end of the marker
-                    // Note: These are the only lines different from the non-recursive version
-                    let copied_chars: String = chars.by_ref().take(num_chars).collect();
-                    len += recursive_decompressed_len(&copied_chars) * repeats;
+                    // NOTE: The following 2 lines + signature is the difference between this and part 1
+                    let mut copied_chars = chars.by_ref().take(num_chars);
+                    len += recursive_decompressed_len(&mut copied_chars) * repeats;
                 } else {
                     len += 1 + num_chars_s.len() + 1 + repeats_s.len();
                 }
@@ -97,7 +97,10 @@ fn recursive_decompressed_len(s: &str) -> usize {
 }
 
 fn part2(input: &[&str]) -> usize {
-    input.iter().map(|s| recursive_decompressed_len(s)).sum()
+    input
+        .iter()
+        .map(|s| recursive_decompressed_len(&mut s.chars()))
+        .sum()
 }
 
 fn main() -> Result<()> {
@@ -146,14 +149,19 @@ mod tests {
 
     #[test]
     fn part_2() {
-        assert_eq!(recursive_decompressed_len("(3x3)XYZ"), 9);
-        assert_eq!(recursive_decompressed_len("X(8x2)(3x3)ABCY"), 20);
+        assert_eq!(recursive_decompressed_len(&mut "(3x3)XYZ".chars()), 9);
         assert_eq!(
-            recursive_decompressed_len("(27x12)(20x12)(13x14)(7x10)(1x12)A"),
+            recursive_decompressed_len(&mut "X(8x2)(3x3)ABCY".chars()),
+            20
+        );
+        assert_eq!(
+            recursive_decompressed_len(&mut "(27x12)(20x12)(13x14)(7x10)(1x12)A".chars()),
             241920
         );
         assert_eq!(
-            recursive_decompressed_len("(25x3)(3x3)ABC(2x3)XY(5x2)PQRSTX(18x9)(3x2)TWO(5x7)SEVEN"),
+            recursive_decompressed_len(
+                &mut "(25x3)(3x3)ABC(2x3)XY(5x2)PQRSTX(18x9)(3x2)TWO(5x7)SEVEN".chars()
+            ),
             445
         );
     }
