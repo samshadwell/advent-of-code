@@ -1,7 +1,7 @@
 pub mod grids;
 
 pub fn start_day(day: &str) {
-    println!("Advent of Code 2025 - Day {day:0>2}");
+    println!("Advent of Code 2015 - Day {day:0>2}");
 }
 
 // Additional common functions
