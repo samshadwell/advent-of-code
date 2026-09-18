@@ -79,10 +79,14 @@ fn parse(input: &str) -> Result<Flow> {
             }),
     ));
 
-    let (_, instructions) = separated_list0(line_ending, instruction_parser)
+    let (rem, instructions) = separated_list0(line_ending, instruction_parser)
         .parse(input)
         .finish()
         .map_err(|e: nom::error::Error<_>| anyhow!("parsing error {e}"))?;
+
+    if !rem.trim().is_empty() {
+        bail!("failed to parse all input, stopped at:\n{} ...", &rem[..64])
+    }
 
     let mut initials = Vec::new();
     let mut bots = HashMap::new();
@@ -143,13 +147,12 @@ impl State {
         }
 
         while let Some(bot_id) = queue.pop_front() {
-            if seen.contains(&bot_id) {
-                continue;
-            }
             match self.get_bot(bot_id) {
                 BotState::Empty | BotState::One(_) => {}
                 BotState::Two(a, b) => {
-                    seen.insert(bot_id);
+                    if !seen.insert(bot_id) {
+                        continue;
+                    }
                     let Some(rule) = flow.bots.get(&bot_id) else {
                         bail!("no rule defined for bot with ID {bot_id:?}")
                     };
